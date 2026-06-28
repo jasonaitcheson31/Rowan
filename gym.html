@@ -930,6 +930,11 @@ img, video, canvas, svg { max-width: 100%; }
 .wt-avg-line { fill: none; stroke: rgba(110,231,183,0.45); stroke-width: 1.5; stroke-dasharray: 4 3; opacity: 0.6; }
 .wt-dot { fill: var(--good); stroke: var(--bg-card); stroke-width: 1.5; }
 .wt-dot-today { fill: #fff; stroke: var(--good); stroke-width: 2; }
+.bf-area { fill: url(#bfFill); }
+.bf-line { fill: none; stroke: #f87171; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.bf-dot { fill: #f87171; stroke: var(--bg-card); stroke-width: 1.5; }
+.bf-dot-today { fill: #fff; stroke: #f87171; stroke-width: 2; }
+.wt-delta.bf-up { color: var(--bad); }
 .wt-meta {
   text-align: center; font-size: 11px; color: var(--text-3);
   margin-top: 8px;
@@ -1355,6 +1360,59 @@ img, video, canvas, svg { max-width: 100%; }
       </div>
       <span class="wt-progress-arrow">→</span>
     </button>
+  </div>
+
+  <!-- BODY FAT -->
+  <div class="wt-section">
+    <div class="wt-divider"><span>BODY FAT</span></div>
+    <div class="wt-card">
+      <div class="wt-row">
+        <span class="wt-num" id="bfNum">—</span>
+        <span class="wt-unit">%</span>
+      </div>
+      <div class="wt-delta hidden" id="bfDelta"></div>
+      <div class="wt-empty" id="bfEmpty">Log your first body fat % to start tracking.</div>
+
+      <div class="wt-chart-wrap hidden" id="bfChartWrap">
+        <div class="wt-chart-yaxis">
+          <span id="bfYAxisMax">—</span>
+          <span id="bfYAxisMin">—</span>
+        </div>
+        <svg class="wt-chart" viewBox="0 0 320 130" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="bfFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f87171" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="#f87171" stop-opacity="0"/>
+            </linearGradient>
+            <filter id="bfGlow"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <line class="wt-grid" x1="0" y1="20" x2="320" y2="20"></line>
+          <line class="wt-grid" x1="0" y1="65" x2="320" y2="65"></line>
+          <line class="wt-grid" x1="0" y1="110" x2="320" y2="110"></line>
+          <g id="bfChartContent"></g>
+        </svg>
+        <div class="wt-meta" id="bfMeta">0 entries</div>
+      </div>
+
+      <div class="wt-locked hidden" id="bfLocked">
+        <div class="wt-locked-info">
+          <span class="wt-locked-check">✓</span>
+          <div>
+            <div class="wt-locked-label">LOGGED TODAY</div>
+            <div class="wt-locked-value" id="bfLockedValue">— %</div>
+          </div>
+        </div>
+        <button class="wt-edit-btn" id="bfEditBtn">Edit</button>
+      </div>
+
+      <div class="wt-input-row" id="bfInputRow">
+        <div class="wt-input-top">
+          <input type="number" step="0.1" min="1" max="60" class="wt-input" id="bfInput" placeholder="Enter body fat %" inputmode="decimal" aria-label="Today's body fat percentage">
+          <span class="wt-unit-static">%</span>
+          <button class="wt-save-btn" id="bfSaveBtn">Save</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Progress photos overlay -->
@@ -2947,6 +3005,125 @@ img, video, canvas, svg { max-width: 100%; }
     if (todayEntry) $('wtInput').value = todayEntry.weight.toFixed(1);
     $('wtInput').focus(); $('wtInput').select();
   });
+
+  // ============================================================
+  // BODY FAT TRACKER
+  //   po_coach_bodyfat : [{ dateKey:'YYYY-MM-DD', pct:Number }]
+  // ============================================================
+  const BF_KEY = 'po_coach_bodyfat';
+
+  function bfLoad() {
+    try {
+      const raw = localStorage.getItem(BF_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.sort((a,b) => a.dateKey.localeCompare(b.dateKey)) : [];
+    } catch (e) { return []; }
+  }
+  function bfSaveArr(arr) {
+    try { localStorage.setItem(BF_KEY, JSON.stringify(arr)); } catch (e) {}
+  }
+
+  let bfEntries = bfLoad();
+
+  function bfSaveEntry(pct) {
+    const key = wtDateKey(new Date());
+    const existing = bfEntries.find(e => e.dateKey === key);
+    if (existing) existing.pct = pct;
+    else { bfEntries.push({ dateKey: key, pct }); bfEntries.sort((a,b) => a.dateKey.localeCompare(b.dateKey)); }
+    bfSaveArr(bfEntries);
+    bfRender();
+  }
+
+  function bfRender() {
+    const last = bfEntries[bfEntries.length - 1] || null;
+    const todayKey = wtDateKey(new Date());
+    const todayEntry = bfEntries.find(e => e.dateKey === todayKey);
+
+    $('bfNum').textContent = last ? last.pct.toFixed(1) : '—';
+
+    if (todayEntry) {
+      $('bfEmpty').classList.add('hidden');
+      $('bfLockedValue').textContent = todayEntry.pct.toFixed(1) + ' %';
+      $('bfLocked').classList.remove('hidden');
+      $('bfInputRow').classList.add('hidden');
+    } else {
+      if (bfEntries.length === 0) $('bfEmpty').classList.remove('hidden');
+      else $('bfEmpty').classList.add('hidden');
+      $('bfLocked').classList.add('hidden');
+      $('bfInputRow').classList.remove('hidden');
+      if (last && !$('bfInput').value) $('bfInput').value = last.pct.toFixed(1);
+    }
+
+    if (bfEntries.length >= 2) {
+      $('bfChartWrap').classList.remove('hidden');
+      bfRenderChart();
+      bfRenderDelta();
+    } else {
+      $('bfChartWrap').classList.add('hidden');
+      $('bfDelta').classList.add('hidden');
+    }
+  }
+
+  function bfRenderChart() {
+    const recent = bfEntries.slice(-30);
+    const vals = recent.map(e => e.pct);
+    const min = Math.min.apply(null, vals);
+    const max = Math.max.apply(null, vals);
+    const pad = Math.max((max - min) * 0.15, 0.3);
+    const yMin = min - pad, yMax = max + pad;
+    const xLeft = 8, xRight = 312, yTop = 20, yBot = 110;
+    const xRange = xRight - xLeft, yRange = yBot - yTop;
+    const xFor = (i) => recent.length === 1 ? xRight : xLeft + (i / (recent.length - 1)) * xRange;
+    const yFor = (v) => yBot - ((v - yMin) / (yMax - yMin)) * yRange;
+    const points = recent.map((e, i) => ({ x: xFor(i), y: yFor(e.pct) }));
+    const linePath = wtSmoothPath(points);
+    const areaPath = linePath + ' L ' + points[points.length-1].x.toFixed(2) + ' ' + yBot + ' L ' + points[0].x.toFixed(2) + ' ' + yBot + ' Z';
+    let html = '<path class="bf-area" d="' + areaPath + '"></path>'
+             + '<path class="bf-line" filter="url(#bfGlow)" d="' + linePath + '"></path>';
+    points.forEach((p, i) => {
+      const cls = (i === points.length - 1) ? 'bf-dot-today' : 'bf-dot';
+      const r = (i === points.length - 1) ? 5 : 3;
+      html += '<circle class="' + cls + '" cx="' + p.x.toFixed(2) + '" cy="' + p.y.toFixed(2) + '" r="' + r + '"/>';
+    });
+    $('bfChartContent').innerHTML = html;
+    $('bfYAxisMax').textContent = yMax.toFixed(1) + '%';
+    $('bfYAxisMin').textContent = yMin.toFixed(1) + '%';
+    $('bfMeta').textContent = bfEntries.length + ' ' + (bfEntries.length === 1 ? 'entry' : 'entries') + ' · last ' + recent.length + ' days';
+  }
+
+  function bfRenderDelta() {
+    const last = bfEntries[bfEntries.length - 1];
+    const lastDate = wtParseKey(last.dateKey);
+    const cutoff = new Date(lastDate); cutoff.setDate(cutoff.getDate() - 7);
+    const baseline = bfEntries.find(e => wtParseKey(e.dateKey) >= cutoff) || bfEntries[0];
+    const diff = last.pct - baseline.pct;
+    const el = $('bfDelta');
+    if (Math.abs(diff) < 0.05) { el.classList.add('hidden'); return; }
+    const arrow = diff > 0 ? '↑' : '↓';
+    const sign = diff > 0 ? '+' : '−';
+    el.textContent = arrow + ' ' + sign + Math.abs(diff).toFixed(1) + '% · last 7d';
+    el.classList.toggle('bf-up', diff > 0);
+    el.classList.toggle('down', diff < 0);
+    el.classList.remove('hidden');
+  }
+
+  $('bfSaveBtn').addEventListener('click', () => {
+    const v = parseFloat($('bfInput').value);
+    if (isNaN(v) || v <= 0 || v >= 100) return;
+    bfSaveEntry(v);
+  });
+  $('bfInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('bfSaveBtn').click();
+  });
+  $('bfEditBtn').addEventListener('click', () => {
+    $('bfLocked').classList.add('hidden');
+    $('bfInputRow').classList.remove('hidden');
+    const todayEntry = bfEntries.find(e => e.dateKey === wtDateKey(new Date()));
+    if (todayEntry) $('bfInput').value = todayEntry.pct.toFixed(1);
+    $('bfInput').focus(); $('bfInput').select();
+  });
+
+  bfRender();
 
   // ============================================================
   // PROGRESS PHOTOS
