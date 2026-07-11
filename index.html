@@ -399,18 +399,14 @@ body::after {
 
     <div class="section-divider"></div>
 
-    <label class="field-label">FITBIT</label>
+    <label class="field-label">TODAY'S BURN</label>
     <div class="whoop-box">
-      <div class="whoop-row">
-        <span class="whoop-status" id="whStatus"><span class="dot"></span><span id="whStatusText">Not connected</span></span>
-        <span class="whoop-sync" id="whSync"></span>
+      <div class="whoop-stats" id="whStats">
+        <div class="whoop-stat"><div class="v" id="whBurned" style="color:var(--warn)">—</div><div class="l">kcal burned</div></div>
+        <div class="whoop-stat"><div class="v" id="whEaten" style="color:var(--text-2)">—</div><div class="l">kcal eaten</div></div>
+        <div class="whoop-stat"><div class="v" id="whDeficit" style="color:var(--good)">—</div><div class="l">deficit</div></div>
       </div>
-      <div class="whoop-stats" id="whStats" style="display:none">
-        <div class="whoop-stat"><div class="v" id="whRec">—</div><div class="l">Steps</div></div>
-        <div class="whoop-stat"><div class="v" id="whSleep">—</div><div class="l">Sleep</div></div>
-        <div class="whoop-stat"><div class="v" id="whRhr">—</div><div class="l">Rest HR</div></div>
-      </div>
-      <button class="whoop-btn" id="whAction" type="button">Sync now</button>
+      <div class="whoop-sync" id="whSync"></div>
     </div>
   </div>
 </div>
@@ -420,8 +416,6 @@ body::after {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const WATER_KEY = 'po_water_v1';
-  const WHOOP_KEY = 'google_tokens_v1';
-  const SYNC_KEY  = 'google_last_sync';
 
   function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
   function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
@@ -516,95 +510,29 @@ body::after {
   }));
   $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
 
-  /* ---------- GOOGLE FIT ---------- */
-  let whStats = null;
-  function relTime(ts) {
-    if (!ts) return 'never';
-    const s = Math.floor((Date.now() - ts) / 1000);
-    if (s < 60) return 'just now';
-    if (s < 3600) return Math.floor(s/60) + ' min ago';
-    if (s < 86400) return Math.floor(s/3600) + ' h ago';
-    return Math.floor(s/86400) + ' d ago';
-  }
-  function renderWhoop(err) {
-    const t = loadJSON(WHOOP_KEY, null);
-    const statusEl = $('whStatus'), txt = $('whStatusText'), syncEl = $('whSync'), action = $('whAction');
-    if (!t || !t.access) {
-      statusEl.classList.remove('on'); txt.textContent = 'Not connected';
-      syncEl.textContent = ''; $('whStats').style.display = 'none';
-      action.textContent = 'Connect on Health page';
-      return;
-    }
-    statusEl.classList.add('on'); txt.textContent = err ? 'Connected (sync failed)' : 'Connected';
-    const last = Number(localStorage.getItem(SYNC_KEY)) || 0;
-    syncEl.textContent = 'Last synced ' + relTime(last);
-    action.textContent = 'Sync now';
-    if (whStats) {
-      $('whStats').style.display = '';
-      $('whRec').textContent   = whStats.steps != null ? whStats.steps.toLocaleString() : '—';
-      $('whSleep').textContent = whStats.sleep != null ? whStats.sleep : '—';
-      $('whRhr').textContent   = whStats.rhr   != null ? whStats.rhr   : '—';
+  /* ---------- CALORIE BURN ---------- */
+  function renderBurn() {
+    const dk = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
+    const burnData = loadJSON('nu_cal_burned', null);
+    const logs = loadJSON('nu_log', []);
+    const todayLog = Array.isArray(logs) ? logs.find(d => d.dateKey === dk) : null;
+    const eaten = todayLog ? todayLog.entries.reduce((s, e) => s + (e.kcal || 0), 0) : 0;
+    $('whEaten').textContent = eaten > 0 ? eaten.toLocaleString() : '—';
+    if (burnData && burnData.date === dk) {
+      const burned = burnData.kcal;
+      const diff = burned - eaten;
+      $('whBurned').textContent = burned.toLocaleString();
+      $('whDeficit').textContent = Math.abs(diff).toLocaleString();
+      $('whDeficit').style.color = diff > 0 ? 'var(--good)' : diff < 0 ? 'var(--bad)' : 'var(--text-2)';
+      $('whSync').textContent = diff > 0 ? diff.toLocaleString() + ' kcal under budget' : diff < 0 ? Math.abs(diff).toLocaleString() + ' kcal over budget' : 'Perfectly balanced';
+    } else {
+      $('whBurned').textContent = '—';
+      $('whDeficit').textContent = '—';
+      $('whDeficit').style.color = 'var(--text-3)';
+      $('whSync').textContent = burnData ? 'Last updated ' + burnData.date + ' — run shortcut to refresh' : 'Run the Sync Fitbit shortcut to log today\'s burn';
     }
   }
-  async function wRefresh(t) {
-    if (!t.refresh) return null;
-    try {
-      const r = await fetch('/api/google-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
-      const j = await r.json();
-      if (j.access_token) { const n = { access:j.access_token, refresh:t.refresh, expires:Date.now()+(j.expires_in||3600)*1000 }; saveJSON(WHOOP_KEY, n); return n; }
-    } catch (e) {}
-    return null;
-  }
-  async function wFetch(path, t, opts = {}) {
-    const url = 'https://www.googleapis.com/fitness/v1' + path;
-    const headers = { 'Authorization': 'Bearer ' + t.access, 'Accept': 'application/json' };
-    if (opts.body) headers['Content-Type'] = 'application/json';
-    const r = await fetch(url, { method: opts.body ? 'POST' : 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
-    if (r.status === 401) { const n = await wRefresh(t); if (n) return wFetch(path, n, opts); throw new Error('unauthorized'); }
-    if (!r.ok) throw new Error('google ' + r.status);
-    return r.json();
-  }
-  async function syncWhoop() {
-    let t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) return;
-    if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
-    try {
-      const now = Date.now();
-      const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
-      const startMs = startOfDay.getTime();
-      const agg = (dataType) => ({ aggregateBy:[{dataTypeName:dataType}], bucketByTime:{durationMillis:Math.max(now-startMs,1)}, startTimeMillis:startMs, endTimeMillis:now });
-      const yesterday = new Date(now - 86400000).toISOString();
-      const todayStr  = new Date(now).toISOString();
-      const [stepsData, hrData, sleepData] = await Promise.all([
-        wFetch('/users/me/dataset:aggregate', t, { body: agg('com.google.step_count.delta') }).catch(()=>null),
-        wFetch('/users/me/dataset:aggregate', t, { body: agg('com.google.heart_rate.bpm') }).catch(()=>null),
-        wFetch(`/users/me/sessions?activityType=72&startTime=${yesterday}&endTime=${todayStr}`, t).catch(()=>null),
-      ]);
-      let steps = null, rhr = null, sleep = null;
-      if (stepsData && stepsData.bucket) {
-        const total = stepsData.bucket.reduce((s,b)=>s+(b.dataset?.[0]?.point||[]).reduce((a,p)=>a+(p.value?.[0]?.intVal||0),0),0);
-        if (total > 0) steps = total;
-      }
-      if (hrData && hrData.bucket) {
-        const vals = hrData.bucket.flatMap(b=>(b.dataset?.[0]?.point||[]).map(p=>p.value?.[0]?.fpVal)).filter(v=>v&&v>30);
-        if (vals.length) rhr = Math.round(Math.min(...vals));
-      }
-      if (sleepData && sleepData.session && sleepData.session.length) {
-        let ms = 0;
-        for (const s of sleepData.session) ms += parseInt(s.endTimeMillis) - parseInt(s.startTimeMillis);
-        const m = Math.round(ms/60000);
-        if (m > 0) sleep = Math.floor(m/60) + 'h ' + String(m%60).padStart(2,'0') + 'm';
-      }
-      whStats = { steps, rhr, sleep };
-      localStorage.setItem(SYNC_KEY, String(Date.now()));
-      renderWhoop();
-    } catch (e) { renderWhoop(e); }
-  }
-  $('whAction').addEventListener('click', () => {
-    const t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) { window.location.href = 'health.html'; return; }
-    $('whAction').textContent = 'Syncing…'; syncWhoop();
-  });
+  renderBurn();
 })();
 </script>
 </body>

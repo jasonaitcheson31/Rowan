@@ -509,7 +509,7 @@ main {
 
 <main>
 
-  <!-- ===== FITBIT card (full) ===== -->
+  <!-- ===== CALORIE BURN card ===== -->
   <style>
     .whoop-section { margin-bottom: 32px; }
     .whoop-card {
@@ -603,266 +603,54 @@ main {
     .wh-err { background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.28); color:#FF8A8A; padding:10px 12px; border-radius:10px; font-size:11.5px; font-family:var(--font-mono); margin-bottom:14px; }
   </style>
   <div class="whoop-section">
-    <div class="section-title">Google Fit</div>
+    <div class="section-title">Today's Burn</div>
     <div class="whoop-card">
-      <div id="whDisc" class="wh-disc">
-        <div class="wh-brand"><span class="wh-brand-mark">G</span><span class="wh-brand-text">GOOGLE FIT</span></div>
-        <div class="wh-disc-title">Not connected</div>
-        <div class="wh-disc-sub">Link your Google account to see live activity, sleep, and heart rate from your Fitbit via Google Fit.</div>
-        <button id="whConnectBtn" class="wh-connect" type="button">Connect Google Fit</button>
+      <div style="text-align:center;padding:8px 0 6px">
+        <div id="hBurnNum" style="font-size:48px;font-weight:700;color:#F59E0B;letter-spacing:-0.03em;line-height:1">—</div>
+        <div style="font-size:11px;letter-spacing:0.12em;color:var(--text-tertiary);margin-top:6px;text-transform:uppercase">kcal burned today</div>
       </div>
-      <div id="whConn" style="display:none">
-        <div class="wh-head">
-          <div class="wh-brand"><span class="wh-brand-mark">G</span><span class="wh-brand-text">GOOGLE FIT</span><span class="wh-live"><span class="wh-live-dot"></span>live</span></div>
-          <div class="wh-head-right">
-            <span id="whUpdated" class="wh-updated">—</span>
-            <button id="whRefresh" class="wh-refresh" type="button" aria-label="Refresh"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/></svg></button>
-          </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
+        <div style="background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 12px;text-align:center">
+          <div id="hEaten" style="font-size:22px;font-weight:700;color:var(--text-primary)">—</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-top:3px;letter-spacing:0.08em;text-transform:uppercase">Eaten</div>
         </div>
-        <div id="whErr" class="wh-err" style="display:none"></div>
-        <div class="wh-ring-wrap">
-          <svg class="wh-ring" viewBox="0 0 220 220" aria-hidden="true">
-            <circle class="wh-ring-track" cx="110" cy="110" r="96"/>
-            <circle class="wh-ring-fill" cx="110" cy="110" r="96" id="whRingFill"/>
-          </svg>
-          <div class="wh-ring-center">
-            <div id="whRecNum" class="wh-ring-num">—</div>
-            <div class="wh-ring-unit">% goal</div>
-            <div id="whRecLabel" class="wh-ring-label">—</div>
-          </div>
+        <div style="background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 12px;text-align:center">
+          <div id="hDeficit" style="font-size:22px;font-weight:700;color:var(--text-tertiary)">—</div>
+          <div style="font-size:11px;color:var(--text-tertiary);margin-top:3px;letter-spacing:0.08em;text-transform:uppercase">Deficit</div>
         </div>
-        <div id="whStages" class="wh-stages" style="display:none">
-          <div class="wh-stages-head"><span class="wh-stages-eye">Sleep stages</span><span class="wh-stages-meta" id="whStagesMeta">—</span></div>
-          <div class="wh-stages-bar">
-            <div class="wh-stage wh-stage-rem"   id="whBarRem"   style="width:0%"></div>
-            <div class="wh-stage wh-stage-deep"  id="whBarDeep"  style="width:0%"></div>
-            <div class="wh-stage wh-stage-light" id="whBarLight" style="width:0%"></div>
-            <div class="wh-stage wh-stage-awake" id="whBarAwake" style="width:0%"></div>
-          </div>
-          <div class="wh-stages-legend">
-            <div class="wh-leg"><span class="wh-leg-dot d-rem"></span>REM<span class="wh-leg-num" id="whRem">—</span></div>
-            <div class="wh-leg"><span class="wh-leg-dot d-deep"></span>Deep<span class="wh-leg-num" id="whDeep">—</span></div>
-            <div class="wh-leg"><span class="wh-leg-dot d-light"></span>Light<span class="wh-leg-num" id="whLight">—</span></div>
-            <div class="wh-leg"><span class="wh-leg-dot d-awake"></span>Awake<span class="wh-leg-num" id="whAwake">—</span></div>
-          </div>
-        </div>
-        <div class="wh-stats">
-          <div class="wh-stat"><span class="wh-zone" id="whZoneSleep"></span><div class="wh-stat-label">Sleep</div><div class="wh-stat-val" id="whSleep">—</div><div class="wh-stat-sub" id="whSleepSub">—</div></div>
-          <div class="wh-stat"><span class="wh-zone" id="whZoneStrain"></span><div class="wh-stat-label">Steps</div><div class="wh-stat-val" id="whStrain">—</div><div class="wh-stat-sub">today</div></div>
-          <div class="wh-stat"><span class="wh-zone" id="whZoneRhr"></span><div class="wh-stat-label">RHR</div><div class="wh-stat-val" id="whRhr">—</div><div class="wh-stat-sub">bpm</div></div>
-          <div class="wh-stat"><span class="wh-zone" id="whZoneCal"></span><div class="wh-stat-label">Burned</div><div class="wh-stat-val" id="whCal">—</div><div class="wh-stat-sub">kcal</div></div>
-        </div>
-        <div class="wh-legend">
-          <span class="wh-leg-item"><span class="wh-zone z-good"></span>Good</span>
-          <span class="wh-leg-item"><span class="wh-zone z-norm"></span>Normal</span>
-          <span class="wh-leg-item"><span class="wh-zone z-warn"></span>Watch</span>
-          <span class="wh-leg-item"><span class="wh-zone z-bad"></span>High / Low</span>
-        </div>
-        <div id="whVerdict" class="wh-verdict" style="display:none">
-          <div class="wh-verdict-head"><span class="wh-verdict-eye">Today's call</span><span id="whVerdictBadge" class="wh-verdict-badge"></span></div>
-          <div id="whVerdictHead" class="wh-verdict-headline"></div>
-          <div id="whVerdictReasons" class="wh-verdict-reasons"></div>
-        </div>
-        <button id="whDisconnectBtn" class="wh-disconnect-link" type="button">Disconnect</button>
       </div>
+      <div id="hBanner" style="margin-top:14px;border-radius:12px;padding:11px 16px;text-align:center;font-size:13px;background:rgba(255,255,255,0.04);color:var(--text-tertiary)">Run the Sync Fitbit shortcut to log today's burn</div>
     </div>
   </div>
   <script>
-  (function () {
-    const KEY       = 'google_tokens_v1';
-    const CLIENT_ID = '658577518152-lccn0hfrubu2j8fofjtr26h03bbb19o9.apps.googleusercontent.com';
-    const REDIRECT  = window.location.origin + '/api/google-callback';
-    const SCOPES    = 'https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.heart_rate.read https://www.googleapis.com/auth/fitness.sleep.read';
-
-    function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
-    function save(t) { try { localStorage.setItem(KEY, JSON.stringify(t)); } catch {} }
-    function wipe() { try { localStorage.removeItem(KEY); } catch {} }
-
-    if (location.hash && location.hash.indexOf('google_access') !== -1) {
-      const h = new URLSearchParams(location.hash.slice(1));
-      const access = h.get('google_access'), refresh = h.get('google_refresh');
-      const expires = Number(h.get('google_expires')) || Date.now() + 3600e3;
-      if (access) { save({ access, refresh, expires }); history.replaceState(null, '', location.pathname + location.search); }
-    }
-
-    const $ = (id) => document.getElementById(id);
-    const errEl = $('whErr');
-    function showErr(m) { errEl.textContent = m || ''; errEl.style.display = m ? 'block' : 'none'; }
-
-    $('whConnectBtn').addEventListener('click', () => {
-      const url = 'https://accounts.google.com/o/oauth2/v2/auth'
-        + '?client_id='     + encodeURIComponent(CLIENT_ID)
-        + '&redirect_uri='  + encodeURIComponent(REDIRECT)
-        + '&response_type=code'
-        + '&scope='         + encodeURIComponent(SCOPES)
-        + '&access_type=offline'
-        + '&prompt=consent';
-      location.href = url;
-    });
-    $('whDisconnectBtn').addEventListener('click', () => { wipe(); render(); });
-    $('whRefresh').addEventListener('click', async (e) => {
-      const btn = e.currentTarget; btn.classList.add('spin');
-      try { await loadData(); } finally { setTimeout(() => btn.classList.remove('spin'), 600); }
-    });
-
-    async function refreshTok(t) {
-      if (!t.refresh) return null;
-      try {
-        const r = await fetch('/api/google-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
-        const j = await r.json();
-        if (j.access_token) {
-          const next = { access: j.access_token, refresh: t.refresh, expires: Date.now() + (j.expires_in||3600)*1000 };
-          save(next); return next;
-        }
-      } catch {}
-      return null;
-    }
-
-    async function gFetch(path, t, opts = {}) {
-      const url = 'https://www.googleapis.com/fitness/v1' + path;
-      const headers = { 'Authorization': 'Bearer ' + t.access, 'Accept': 'application/json' };
-      if (opts.body) headers['Content-Type'] = 'application/json';
-      const r = await fetch(url, { method: opts.body ? 'POST' : 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
-      if (r.status === 401) { const n = await refreshTok(t); if (n) return gFetch(path, n, opts); throw new Error('unauthorized — reconnect'); }
-      if (!r.ok) throw new Error('Google Fit ' + r.status + ': ' + (await r.text()));
-      return await r.json();
-    }
-
-    function fmtMins(mins) { const h = Math.floor(mins/60); return h + 'h ' + String(mins%60).padStart(2,'0') + 'm'; }
-    function zone(el, c) { el.className = 'wh-zone'; if (c) el.classList.add('z-' + c); }
-    function sleepZone(h) { if (h == null) return null; if (h >= 7) return 'good'; if (h >= 5.5) return 'norm'; return 'warn'; }
-    function stepsZone(s) { if (s == null) return null; if (s >= 10000) return 'good'; if (s >= 7500) return 'norm'; if (s >= 5000) return 'warn'; return 'bad'; }
-    function rhrZone(r) { if (r == null) return null; if (r <= 55) return 'good'; if (r <= 70) return 'norm'; return 'warn'; }
-
-    function ringStroke(pct) {
-      if (pct >= 100) return '#6BE3A4';
-      if (pct >= 75)  return '#60A5FA';
-      if (pct >= 50)  return '#F2C063';
-      return '#FF8A8A';
-    }
-
-    function verdict(steps, sleepHrs) {
-      if (steps == null && sleepHrs == null) return null;
-      const goodSteps = steps != null && steps >= 8000;
-      const goodSleep = sleepHrs != null && sleepHrs >= 6.5;
-      if (goodSteps && goodSleep) return { cls:'green', badge:'GREEN', headline:'Active day and solid sleep — body is primed. Push hard in training.' };
-      if (goodSteps || goodSleep) return { cls:'yellow', badge:'YELLOW', headline:'Decent activity or sleep — moderate effort today, don\'t max out.' };
-      return { cls:'red', badge:'RED', headline:'Low activity and short sleep — focus on recovery, light movement only.' };
-    }
-
-    async function loadData() {
-      let t = load(); if (!t) return;
-      if (t.expires && Date.now() > t.expires - 60000) { const n = await refreshTok(t); if (n) t = n; }
-      showErr('');
-      try {
-        const now = Date.now();
-        const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
-        const startMs = startOfDay.getTime();
-        const aggBody = (dataType) => ({
-          aggregateBy: [{ dataTypeName: dataType }],
-          bucketByTime: { durationMillis: Math.max(now - startMs, 1) },
-          startTimeMillis: startMs,
-          endTimeMillis: now,
-        });
-        const yesterday = new Date(now - 86400000).toISOString();
-        const todayStr  = new Date(now).toISOString();
-
-        const [stepsData, hrData, sleepData, calData] = await Promise.all([
-          gFetch('/users/me/dataset:aggregate', t, { body: aggBody('com.google.step_count.delta') }).catch(() => null),
-          gFetch('/users/me/dataset:aggregate', t, { body: aggBody('com.google.heart_rate.bpm') }).catch(() => null),
-          gFetch(`/users/me/sessions?activityType=72&startTime=${yesterday}&endTime=${todayStr}`, t).catch(() => null),
-          gFetch('/users/me/dataset:aggregate', t, { body: aggBody('com.google.calories.expended') }).catch(() => null),
-        ]);
-
-        // Steps
-        let steps = null;
-        if (stepsData && stepsData.bucket) {
-          const total = stepsData.bucket.reduce((sum, b) =>
-            sum + (b.dataset?.[0]?.point || []).reduce((s, p) => s + (p.value?.[0]?.intVal || 0), 0), 0);
-          if (total > 0) steps = total;
-        }
-
-        // Calories burned
-        let calBurned = null;
-        if (calData && calData.bucket) {
-          const total = calData.bucket.reduce((sum, b) =>
-            sum + (b.dataset?.[0]?.point || []).reduce((s, p) => s + (p.value?.[0]?.fpVal || 0), 0), 0);
-          if (total > 0) {
-            calBurned = Math.round(total);
-            localStorage.setItem('gfit_cal_burned_today', JSON.stringify({ date: new Date().toISOString().slice(0,10), kcal: calBurned }));
-          }
-        }
-
-        // Resting HR — use minimum BPM reading of the day as proxy
-        let rhr = null;
-        if (hrData && hrData.bucket) {
-          const vals = hrData.bucket.flatMap(b => (b.dataset?.[0]?.point || [])
-            .map(p => p.value?.[0]?.fpVal)).filter(v => v && v > 30);
-          if (vals.length) rhr = Math.round(Math.min(...vals));
-        }
-
-        // Sleep from sessions
-        let sleepHrs = null, totalSleepMins = null;
-        if (sleepData && sleepData.session && sleepData.session.length) {
-          let totalMs = 0;
-          for (const s of sleepData.session) {
-            totalMs += parseInt(s.endTimeMillis) - parseInt(s.startTimeMillis);
-          }
-          totalSleepMins = Math.round(totalMs / 60000);
-          if (totalSleepMins > 0) sleepHrs = totalSleepMins / 60;
-        }
-
-        // Steps ring
-        const stepsPct = steps != null ? Math.min(100, Math.round(steps / 10000 * 100)) : null;
-        const fill = $('whRingFill');
-        const C = 603.19;
-        if (stepsPct != null) {
-          fill.style.strokeDashoffset = String(C * (1 - stepsPct/100));
-          fill.style.stroke = ringStroke(stepsPct);
-          $('whRecNum').textContent = String(stepsPct);
-          const labelEl = $('whRecLabel');
-          labelEl.textContent = steps.toLocaleString() + ' steps';
-          labelEl.style.color = ringStroke(stepsPct);
-        }
-
-        // Sleep
-        if (totalSleepMins != null) {
-          $('whSleep').textContent = fmtMins(totalSleepMins);
-          $('whSleepSub').textContent = 'asleep';
-          zone($('whZoneSleep'), sleepZone(sleepHrs));
-        }
-
-        if (steps != null)     { $('whStrain').textContent = steps.toLocaleString(); zone($('whZoneStrain'), stepsZone(steps)); }
-        if (rhr != null)       { $('whRhr').textContent = String(rhr); zone($('whZoneRhr'), rhrZone(rhr)); }
-        if (calBurned != null) { $('whCal').textContent = calBurned.toLocaleString(); $('whZoneCal').className = 'wh-zone z-good'; }
-
-        // Verdict
-        const v = verdict(steps, sleepHrs);
-        if (v) {
-          $('whVerdict').style.display = '';
-          const badge = $('whVerdictBadge');
-          badge.textContent = v.badge;
-          badge.className = 'wh-verdict-badge ' + v.cls;
-          $('whVerdictHead').textContent = v.headline;
-          const reasons = [];
-          if (steps != null)    reasons.push((steps >= 8000 ? '✓' : '·') + ' Steps ' + steps.toLocaleString() + ' — ' + (steps >= 10000 ? 'goal hit.' : steps >= 7500 ? 'on track.' : 'behind pace.'));
-          if (sleepHrs != null) reasons.push((sleepHrs >= 7 ? '✓' : '·') + ' Sleep ' + fmtMins(Math.round(sleepHrs*60)) + ' — ' + (sleepHrs >= 7 ? 'well rested.' : sleepHrs >= 5.5 ? 'adequate.' : 'short night.'));
-          if (rhr != null)      reasons.push((rhr <= 60 ? '✓' : '·') + ' RHR ' + rhr + ' bpm — ' + (rhr <= 55 ? 'excellent.' : rhr <= 70 ? 'normal.' : 'elevated.'));
-          $('whVerdictReasons').innerHTML = reasons.join('<br>');
-        }
-
-        $('whUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-      } catch (e) {
-        showErr(e.message || String(e));
+  (function() {
+    const dk = (() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); })();
+    const burnData = (() => { try { return JSON.parse(localStorage.getItem('nu_cal_burned')); } catch { return null; } })();
+    const logs = (() => { try { return JSON.parse(localStorage.getItem('nu_log')) || []; } catch { return []; } })();
+    const todayLog = Array.isArray(logs) ? logs.find(d => d.dateKey === dk) : null;
+    const eaten = todayLog ? todayLog.entries.reduce((s, e) => s + (e.kcal || 0), 0) : 0;
+    const $ = id => document.getElementById(id);
+    $('hEaten').textContent = eaten > 0 ? eaten.toLocaleString() : '—';
+    if (burnData && burnData.date === dk) {
+      const burned = burnData.kcal;
+      const diff = burned - eaten;
+      $('hBurnNum').textContent = burned.toLocaleString();
+      $('hDeficit').textContent = Math.abs(diff).toLocaleString();
+      if (diff > 0) {
+        $('hDeficit').style.color = '#6EE7B7';
+        $('hBanner').textContent = diff.toLocaleString() + ' kcal deficit — you can eat ' + diff.toLocaleString() + ' more today';
+        $('hBanner').style.background = 'rgba(110,231,183,0.10)';
+        $('hBanner').style.color = '#6EE7B7';
+      } else if (diff < 0) {
+        $('hDeficit').style.color = '#FF8A8A';
+        $('hBanner').textContent = Math.abs(diff).toLocaleString() + ' kcal surplus — ' + Math.abs(diff).toLocaleString() + ' kcal over your burn';
+        $('hBanner').style.background = 'rgba(255,138,138,0.10)';
+        $('hBanner').style.color = '#FF8A8A';
+      } else {
+        $('hDeficit').style.color = 'var(--text-secondary)';
+        $('hBanner').textContent = 'Perfectly balanced';
       }
     }
-
-    function render() {
-      const t = load();
-      if (t && t.access) { $('whDisc').style.display = 'none'; $('whConn').style.display = ''; loadData(); }
-      else { $('whDisc').style.display = ''; $('whConn').style.display = 'none'; }
-    }
-    render();
   })();
   </script>
 
