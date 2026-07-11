@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="lock.js"></script>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0b">
+<title>Nutrition · Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+<style>
+:root {
+  --bg: #0a0a0b;
+  --bg-card: #111113;
+  --text-1: #ffffff;
+  --text-2: rgba(255,255,255,0.6);
+  --text-3: rgba(255,255,255,0.4);
+  --text-4: rgba(255,255,255,0.25);
+  --border: rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.14);
+  --good: #6ee7b7;
+  --warn: #fbbf24;
+  --bad: #ff8a8a;
+  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SF Mono, Menlo, Consolas, monospace;
+  --c-kcal: #f59e0b;
+  --c-prot: #6ee7b7;
+  --c-carb: #60a5fa;
+  --c-fat:  #f87171;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, #14141a 0%, #0a0a0b 60%);
+  color: var(--text-1);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  min-height: 100vh;
+}
+.nu-shell {
+  width: 100%; max-width: min(720px, 100vw);
+  margin: 0 auto;
+  padding: 24px 16px calc(80px + env(safe-area-inset-bottom));
+}
+
+/* Header */
+.nu-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.nu-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.nu-edit-btn {
+  background: transparent; border: 1px solid var(--border-strong);
+  color: var(--text-2); font-family: inherit; font-size: 12px;
+  font-weight: 600; padding: 6px 12px; border-radius: 8px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+
+/* Day type toggle */
+.nu-day-toggle {
+  display: flex; gap: 8px; margin-bottom: 20px;
+}
+.nu-day-btn {
+  flex: 1; padding: 10px; border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: transparent; color: var(--text-2);
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nu-day-btn.active {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.22);
+  color: var(--text-1);
+}
+
+/* Calorie card */
+.nu-cal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 22px 20px 18px;
+  margin-bottom: 12px;
+}
+.nu-cal-row {
+  display: flex; align-items: flex-end; gap: 8px; margin-bottom: 4px;
+}
+.nu-cal-num {
+  font-size: 48px; font-weight: 700; letter-spacing: -0.04em;
+  color: var(--c-kcal); line-height: 1; font-variant-numeric: tabular-nums;
+}
+.nu-cal-of {
+  font-size: 16px; color: var(--text-3); font-weight: 500; padding-bottom: 6px;
+}
+.nu-cal-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 14px;
+}
+.nu-cal-bar-wrap {
+  height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;
+}
+.nu-cal-bar {
+  height: 100%; background: var(--c-kcal); border-radius: 4px;
+  transition: width 0.4s ease; max-width: 100%;
+}
+
+/* Macro bars */
+.nu-macros {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.nu-macro-row { display: flex; flex-direction: column; gap: 6px; }
+.nu-macro-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.nu-macro-name {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.nu-macro-val {
+  font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-2);
+}
+.nu-macro-val em { color: var(--text-4); font-style: normal; font-weight: 400; }
+.nu-bar-wrap {
+  height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;
+}
+.nu-bar {
+  height: 100%; border-radius: 3px; transition: width 0.4s ease; max-width: 100%;
+}
+.nu-bar.prot { background: var(--c-prot); }
+.nu-bar.carb { background: var(--c-carb); }
+.nu-bar.fat  { background: var(--c-fat); }
+
+/* Add food card */
+.nu-add-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+.nu-add-heading {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 12px;
+}
+.nu-add-name {
+  width: 100%; background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text-1); font-family: inherit; font-size: 15px;
+  font-weight: 500; padding: 11px 13px; outline: none; margin-bottom: 10px;
+}
+.nu-add-name:focus { border-color: rgba(245,158,11,0.4); }
+.nu-add-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;
+}
+.nu-add-field { display: flex; flex-direction: column; gap: 4px; }
+.nu-add-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; text-align: center;
+}
+.nu-add-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text-1); font-family: inherit; font-size: 15px;
+  font-weight: 600; padding: 9px 6px; outline: none;
+  text-align: center; width: 100%; font-variant-numeric: tabular-nums;
+}
+.nu-add-input:focus { border-color: rgba(255,255,255,0.2); }
+.nu-submit {
+  width: 100%; padding: 12px; background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-strong); color: var(--text-1);
+  font-family: inherit; font-size: 14px; font-weight: 700;
+  border-radius: 12px; cursor: pointer; transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.nu-submit:active { background: rgba(255,255,255,0.1); }
+
+/* Log card */
+.nu-log-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px; overflow: hidden;
+}
+.nu-log-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+}
+.nu-log-heading {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.nu-clear-btn {
+  background: transparent; border: none; color: var(--bad);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; padding: 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.nu-log-empty {
+  padding: 24px 20px; text-align: center; font-size: 13px; color: var(--text-3);
+}
+.nu-entry {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+}
+.nu-entry:last-child { border-bottom: none; }
+.nu-entry-info { flex: 1; min-width: 0; }
+.nu-entry-name {
+  font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nu-entry-pills {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  font-size: 11px; font-family: var(--font-mono);
+}
+.nu-pill-kcal { color: var(--c-kcal); font-weight: 700; }
+.nu-pill-p    { color: var(--c-prot); }
+.nu-pill-c    { color: var(--c-carb); }
+.nu-pill-f    { color: var(--c-fat);  }
+.nu-del {
+  background: transparent; border: none; color: var(--text-4);
+  font-size: 20px; cursor: pointer; padding: 2px 8px; line-height: 1;
+  flex-shrink: 0; -webkit-tap-highlight-color: transparent;
+}
+.nu-del:active { color: var(--bad); }
+
+/* Targets modal */
+.nu-modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100;
+  display: flex; align-items: flex-end;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.nu-modal-bg.open { opacity: 1; pointer-events: all; }
+.nu-modal {
+  width: 100%; max-width: min(720px, 100vw); margin: 0 auto;
+  background: #18181b; border-radius: 24px 24px 0 0;
+  padding: 24px 20px calc(32px + env(safe-area-inset-bottom));
+  transform: translateY(20px); transition: transform 0.25s ease;
+  max-height: 88vh; overflow-y: auto;
+}
+.nu-modal-bg.open .nu-modal { transform: translateY(0); }
+.nu-modal-head {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;
+}
+.nu-modal-title { font-size: 16px; font-weight: 700; }
+.nu-modal-close {
+  background: rgba(255,255,255,0.08); border: none; color: var(--text-2);
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.nu-modal-section { margin-bottom: 22px; }
+.nu-modal-section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 12px;
+}
+.nu-modal-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.nu-modal-field { display: flex; flex-direction: column; gap: 5px; }
+.nu-modal-field-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; text-align: center;
+}
+.nu-modal-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-strong); border-radius: 10px;
+  color: var(--text-1); font-family: inherit; font-size: 16px;
+  font-weight: 600; padding: 10px 6px; outline: none;
+  text-align: center; width: 100%; font-variant-numeric: tabular-nums;
+}
+.nu-modal-input:focus { border-color: rgba(255,255,255,0.3); }
+.nu-modal-save {
+  width: 100%; padding: 14px; background: var(--good); color: #000;
+  border: none; border-radius: 14px; font-family: inherit;
+  font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="nu-shell">
+
+  <div class="nu-header">
+    <span class="nu-title">Nutrition</span>
+    <button class="nu-edit-btn" id="nuEditBtn">Edit Targets</button>
+  </div>
+
+  <div class="nu-day-toggle">
+    <button class="nu-day-btn" id="nuTrainingBtn" data-type="training">Training Day</button>
+    <button class="nu-day-btn" id="nuRestBtn" data-type="rest">Rest Day</button>
+  </div>
+
+  <!-- Calories -->
+  <div class="nu-cal-card">
+    <div class="nu-cal-row">
+      <span class="nu-cal-num" id="nuKcalNum">0</span>
+      <span class="nu-cal-of">/ <span id="nuKcalTarget">2500</span> kcal</span>
+    </div>
+    <div class="nu-cal-label">Calories today</div>
+    <div class="nu-cal-bar-wrap">
+      <div class="nu-cal-bar" id="nuKcalBar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Macros -->
+  <div class="nu-macros">
+    <div class="nu-macro-row">
+      <div class="nu-macro-head">
+        <span class="nu-macro-name" style="color:var(--c-prot)">Protein</span>
+        <span class="nu-macro-val"><span id="nuProtNum">0</span>g <em>/ <span id="nuProtTarget">180</span>g</em></span>
+      </div>
+      <div class="nu-bar-wrap"><div class="nu-bar prot" id="nuProtBar" style="width:0%"></div></div>
+    </div>
+    <div class="nu-macro-row">
+      <div class="nu-macro-head">
+        <span class="nu-macro-name" style="color:var(--c-carb)">Carbs</span>
+        <span class="nu-macro-val"><span id="nuCarbNum">0</span>g <em>/ <span id="nuCarbTarget">250</span>g</em></span>
+      </div>
+      <div class="nu-bar-wrap"><div class="nu-bar carb" id="nuCarbBar" style="width:0%"></div></div>
+    </div>
+    <div class="nu-macro-row">
+      <div class="nu-macro-head">
+        <span class="nu-macro-name" style="color:var(--c-fat)">Fat</span>
+        <span class="nu-macro-val"><span id="nuFatNum">0</span>g <em>/ <span id="nuFatTarget">80</span>g</em></span>
+      </div>
+      <div class="nu-bar-wrap"><div class="nu-bar fat" id="nuFatBar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Add food -->
+  <div class="nu-add-card">
+    <div class="nu-add-heading">Add Food</div>
+    <input class="nu-add-name" id="nuName" type="text" placeholder="Food or meal name…" autocomplete="off" autocorrect="off">
+    <div class="nu-add-grid">
+      <div class="nu-add-field">
+        <span class="nu-add-label" style="color:var(--c-kcal)">kcal</span>
+        <input class="nu-add-input" id="nuKcal" type="number" min="0" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="nu-add-field">
+        <span class="nu-add-label" style="color:var(--c-prot)">Protein</span>
+        <input class="nu-add-input" id="nuProt" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0">
+      </div>
+      <div class="nu-add-field">
+        <span class="nu-add-label" style="color:var(--c-carb)">Carbs</span>
+        <input class="nu-add-input" id="nuCarb" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0">
+      </div>
+      <div class="nu-add-field">
+        <span class="nu-add-label" style="color:var(--c-fat)">Fat</span>
+        <input class="nu-add-input" id="nuFat" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0">
+      </div>
+    </div>
+    <button class="nu-submit" id="nuAddBtn">+ Add to Log</button>
+  </div>
+
+  <!-- Today's log -->
+  <div class="nu-log-card">
+    <div class="nu-log-head">
+      <span class="nu-log-heading">Today's Log</span>
+      <button class="nu-clear-btn" id="nuClearBtn">Clear All</button>
+    </div>
+    <div id="nuLog"></div>
+  </div>
+
+</div>
+
+<!-- Edit targets modal -->
+<div class="nu-modal-bg" id="nuModalBg">
+  <div class="nu-modal">
+    <div class="nu-modal-head">
+      <span class="nu-modal-title">Edit Targets</span>
+      <button class="nu-modal-close" id="nuModalClose">×</button>
+    </div>
+
+    <div class="nu-modal-section">
+      <div class="nu-modal-section-label">Training Day</div>
+      <div class="nu-modal-grid">
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-kcal)">kcal</span>
+          <input class="nu-modal-input" id="tKcal" type="number" inputmode="numeric">
+        </div>
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-prot)">Protein g</span>
+          <input class="nu-modal-input" id="tProt" type="number" inputmode="decimal">
+        </div>
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-carb)">Carbs g</span>
+          <input class="nu-modal-input" id="tCarb" type="number" inputmode="decimal">
+        </div>
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-fat)">Fat g</span>
+          <input class="nu-modal-input" id="tFat" type="number" inputmode="decimal">
+        </div>
+      </div>
+    </div>
+
+    <div class="nu-modal-section">
+      <div class="nu-modal-section-label">Rest Day</div>
+      <div class="nu-modal-grid">
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-kcal)">kcal</span>
+          <input class="nu-modal-input" id="rKcal" type="number" inputmode="numeric">
+        </div>
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-prot)">Protein g</span>
+          <input class="nu-modal-input" id="rProt" type="number" inputmode="decimal">
+        </div>
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-carb)">Carbs g</span>
+          <input class="nu-modal-input" id="rCarb" type="number" inputmode="decimal">
+        </div>
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-fat)">Fat g</span>
+          <input class="nu-modal-input" id="rFat" type="number" inputmode="decimal">
+        </div>
+      </div>
+    </div>
+
+    <button class="nu-modal-save" id="nuModalSave">Save Targets</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const TARGETS_KEY = 'nu_targets';
+const LOG_KEY     = 'nu_log';
+
+const DEFAULT_TARGETS = {
+  training: { kcal: 2500, prot: 180, carb: 250, fat: 80 },
+  rest:     { kcal: 2000, prot: 160, carb: 180, fat: 70 }
+};
+
+function loadTargets() {
+  try {
+    const raw = localStorage.getItem(TARGETS_KEY);
+    if (raw) return Object.assign(JSON.parse(JSON.stringify(DEFAULT_TARGETS)), JSON.parse(raw));
+  } catch (e) {}
+  return JSON.parse(JSON.stringify(DEFAULT_TARGETS));
+}
+function saveTargets(t) {
+  try { localStorage.setItem(TARGETS_KEY, JSON.stringify(t)); } catch (e) {}
+}
+
+function dateKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function loadTodayLog() {
+  try {
+    const raw = localStorage.getItem(LOG_KEY);
+    const all = raw ? JSON.parse(raw) : [];
+    const k = dateKey();
+    return all.find(d => d.dateKey === k) || { dateKey: k, dayType: 'training', entries: [] };
+  } catch (e) {
+    return { dateKey: dateKey(), dayType: 'training', entries: [] };
+  }
+}
+
+function persistLog(dayData) {
+  try {
+    const raw = localStorage.getItem(LOG_KEY);
+    let all = raw ? JSON.parse(raw) : [];
+    const idx = all.findIndex(d => d.dateKey === dayData.dateKey);
+    if (idx >= 0) all[idx] = dayData; else all.push(dayData);
+    all.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+    if (all.length > 90) all = all.slice(-90);
+    localStorage.setItem(LOG_KEY, JSON.stringify(all));
+  } catch (e) {}
+}
+
+let targets = loadTargets();
+let today   = loadTodayLog();
+
+function curTargets() { return targets[today.dayType] || targets.training; }
+
+function totals() {
+  return today.entries.reduce((a, e) => ({
+    kcal: a.kcal + (e.kcal || 0),
+    prot: a.prot + (e.prot || 0),
+    carb: a.carb + (e.carb || 0),
+    fat:  a.fat  + (e.fat  || 0)
+  }), { kcal: 0, prot: 0, carb: 0, fat: 0 });
+}
+
+function pct(val, max) { return max ? Math.min(100, Math.round((val / max) * 100)) : 0; }
+
+function fmt(n) { return n % 1 === 0 ? String(n) : n.toFixed(1); }
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function render() {
+  const t   = curTargets();
+  const tot = totals();
+
+  $('nuTrainingBtn').classList.toggle('active', today.dayType === 'training');
+  $('nuRestBtn').classList.toggle('active',     today.dayType === 'rest');
+
+  $('nuKcalNum').textContent    = tot.kcal;
+  $('nuKcalTarget').textContent = t.kcal;
+  $('nuKcalBar').style.width    = pct(tot.kcal, t.kcal) + '%';
+
+  $('nuProtNum').textContent    = fmt(tot.prot);
+  $('nuProtTarget').textContent = t.prot;
+  $('nuProtBar').style.width    = pct(tot.prot, t.prot) + '%';
+
+  $('nuCarbNum').textContent    = fmt(tot.carb);
+  $('nuCarbTarget').textContent = t.carb;
+  $('nuCarbBar').style.width    = pct(tot.carb, t.carb) + '%';
+
+  $('nuFatNum').textContent     = fmt(tot.fat);
+  $('nuFatTarget').textContent  = t.fat;
+  $('nuFatBar').style.width     = pct(tot.fat, t.fat) + '%';
+
+  const logEl = $('nuLog');
+  if (!today.entries.length) {
+    logEl.innerHTML = '<div class="nu-log-empty">Nothing logged yet — add your first meal above.</div>';
+    return;
+  }
+  logEl.innerHTML = today.entries.map((e, i) => `
+    <div class="nu-entry">
+      <div class="nu-entry-info">
+        <div class="nu-entry-name">${esc(e.name || 'Food')}</div>
+        <div class="nu-entry-pills">
+          <span class="nu-pill-kcal">${e.kcal} kcal</span>
+          <span class="nu-pill-p">P ${fmt(e.prot)}g</span>
+          <span class="nu-pill-c">C ${fmt(e.carb)}g</span>
+          <span class="nu-pill-f">F ${fmt(e.fat)}g</span>
+        </div>
+      </div>
+      <button class="nu-del" data-i="${i}" aria-label="Delete">×</button>
+    </div>
+  `).join('');
+
+  logEl.querySelectorAll('.nu-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      today.entries.splice(Number(btn.dataset.i), 1);
+      persistLog(today);
+      render();
+    });
+  });
+}
+
+// Day type
+[$('nuTrainingBtn'), $('nuRestBtn')].forEach(btn => {
+  btn.addEventListener('click', () => {
+    today.dayType = btn.dataset.type;
+    persistLog(today);
+    render();
+  });
+});
+
+// Add food
+function addEntry() {
+  const name = $('nuName').value.trim();
+  const kcal = Math.round(parseFloat($('nuKcal').value) || 0);
+  const prot = parseFloat($('nuProt').value) || 0;
+  const carb = parseFloat($('nuCarb').value) || 0;
+  const fat  = parseFloat($('nuFat').value)  || 0;
+  if (!name && !kcal && !prot && !carb && !fat) return;
+  today.entries.push({ name: name || 'Food', kcal, prot, carb, fat });
+  persistLog(today);
+  $('nuName').value = $('nuKcal').value = $('nuProt').value = $('nuCarb').value = $('nuFat').value = '';
+  $('nuName').focus();
+  render();
+}
+$('nuAddBtn').addEventListener('click', addEntry);
+[$('nuName'), $('nuKcal'), $('nuProt'), $('nuCarb'), $('nuFat')].forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') addEntry(); });
+});
+
+// Clear all
+$('nuClearBtn').addEventListener('click', () => {
+  if (!today.entries.length || !confirm('Clear all entries for today?')) return;
+  today.entries = [];
+  persistLog(today);
+  render();
+});
+
+// Edit targets modal
+$('nuEditBtn').addEventListener('click', () => {
+  $('tKcal').value = targets.training.kcal;
+  $('tProt').value = targets.training.prot;
+  $('tCarb').value = targets.training.carb;
+  $('tFat').value  = targets.training.fat;
+  $('rKcal').value = targets.rest.kcal;
+  $('rProt').value = targets.rest.prot;
+  $('rCarb').value = targets.rest.carb;
+  $('rFat').value  = targets.rest.fat;
+  $('nuModalBg').classList.add('open');
+});
+$('nuModalClose').addEventListener('click', () => $('nuModalBg').classList.remove('open'));
+$('nuModalBg').addEventListener('click', e => {
+  if (e.target === $('nuModalBg')) $('nuModalBg').classList.remove('open');
+});
+$('nuModalSave').addEventListener('click', () => {
+  targets.training = {
+    kcal: Math.round(parseFloat($('tKcal').value) || 0),
+    prot: parseFloat($('tProt').value) || 0,
+    carb: parseFloat($('tCarb').value) || 0,
+    fat:  parseFloat($('tFat').value)  || 0
+  };
+  targets.rest = {
+    kcal: Math.round(parseFloat($('rKcal').value) || 0),
+    prot: parseFloat($('rProt').value) || 0,
+    carb: parseFloat($('rCarb').value) || 0,
+    fat:  parseFloat($('rFat').value)  || 0
+  };
+  saveTargets(targets);
+  $('nuModalBg').classList.remove('open');
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
