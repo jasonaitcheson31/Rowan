@@ -649,8 +649,8 @@ main {
         <div class="wh-stats">
           <div class="wh-stat"><span class="wh-zone" id="whZoneSleep"></span><div class="wh-stat-label">Sleep</div><div class="wh-stat-val" id="whSleep">—</div><div class="wh-stat-sub" id="whSleepSub">—</div></div>
           <div class="wh-stat"><span class="wh-zone" id="whZoneStrain"></span><div class="wh-stat-label">Steps</div><div class="wh-stat-val" id="whStrain">—</div><div class="wh-stat-sub">today</div></div>
-          <div class="wh-stat"><span class="wh-zone" id="whZoneHrv"></span><div class="wh-stat-label">Active Mins</div><div class="wh-stat-val" id="whHrv">—</div><div class="wh-stat-sub">min</div></div>
           <div class="wh-stat"><span class="wh-zone" id="whZoneRhr"></span><div class="wh-stat-label">RHR</div><div class="wh-stat-val" id="whRhr">—</div><div class="wh-stat-sub">bpm</div></div>
+          <div class="wh-stat"><span class="wh-zone" id="whZoneCal"></span><div class="wh-stat-label">Burned</div><div class="wh-stat-val" id="whCal">—</div><div class="wh-stat-sub">kcal</div></div>
         </div>
         <div class="wh-legend">
           <span class="wh-leg-item"><span class="wh-zone z-good"></span>Good</span>
@@ -672,7 +672,7 @@ main {
     const KEY       = 'google_tokens_v1';
     const CLIENT_ID = '658577518152-lccn0hfrubu2j8fofjtr26h03bbb19o9.apps.googleusercontent.com';
     const REDIRECT  = window.location.origin + '/api/google-callback';
-    const SCOPES    = 'https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.heart_rate.read https://www.googleapis.com/auth/fitness.sleep.read';
+    const SCOPES    = 'https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.heart_rate.read https://www.googleapis.com/auth/fitness.sleep.read https://www.googleapis.com/auth/fitness.calories.read';
 
     function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
     function save(t) { try { localStorage.setItem(KEY, JSON.stringify(t)); } catch {} }
@@ -767,10 +767,11 @@ main {
         const yesterday = new Date(now - 86400000).toISOString();
         const todayStr  = new Date(now).toISOString();
 
-        const [stepsData, hrData, sleepData] = await Promise.all([
+        const [stepsData, hrData, sleepData, calData] = await Promise.all([
           gFetch('/users/me/dataset:aggregate', t, { body: aggBody('com.google.step_count.delta') }).catch(() => null),
           gFetch('/users/me/dataset:aggregate', t, { body: aggBody('com.google.heart_rate.bpm') }).catch(() => null),
           gFetch(`/users/me/sessions?activityType=72&startTime=${yesterday}&endTime=${todayStr}`, t).catch(() => null),
+          gFetch('/users/me/dataset:aggregate', t, { body: aggBody('com.google.calories.expended') }).catch(() => null),
         ]);
 
         // Steps
@@ -779,6 +780,17 @@ main {
           const total = stepsData.bucket.reduce((sum, b) =>
             sum + (b.dataset?.[0]?.point || []).reduce((s, p) => s + (p.value?.[0]?.intVal || 0), 0), 0);
           if (total > 0) steps = total;
+        }
+
+        // Calories burned
+        let calBurned = null;
+        if (calData && calData.bucket) {
+          const total = calData.bucket.reduce((sum, b) =>
+            sum + (b.dataset?.[0]?.point || []).reduce((s, p) => s + (p.value?.[0]?.fpVal || 0), 0), 0);
+          if (total > 0) {
+            calBurned = Math.round(total);
+            localStorage.setItem('gfit_cal_burned_today', JSON.stringify({ date: new Date().toISOString().slice(0,10), kcal: calBurned }));
+          }
         }
 
         // Resting HR — use minimum BPM reading of the day as proxy
@@ -820,8 +832,9 @@ main {
           zone($('whZoneSleep'), sleepZone(sleepHrs));
         }
 
-        if (steps != null) { $('whStrain').textContent = steps.toLocaleString(); zone($('whZoneStrain'), stepsZone(steps)); }
-        if (rhr != null)   { $('whRhr').textContent = String(rhr); zone($('whZoneRhr'), rhrZone(rhr)); }
+        if (steps != null)     { $('whStrain').textContent = steps.toLocaleString(); zone($('whZoneStrain'), stepsZone(steps)); }
+        if (rhr != null)       { $('whRhr').textContent = String(rhr); zone($('whZoneRhr'), rhrZone(rhr)); }
+        if (calBurned != null) { $('whCal').textContent = calBurned.toLocaleString(); $('whZoneCal').className = 'wh-zone z-good'; }
 
         // Verdict
         const v = verdict(steps, sleepHrs);
