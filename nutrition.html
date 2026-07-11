@@ -286,6 +286,38 @@ html, body {
 }
 
 .hidden { display: none !important; }
+
+/* Burn & Balance card */
+.nu-balance-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+}
+.nu-balance-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;
+}
+.nu-balance-stat { text-align: center; padding: 8px 0; }
+.nu-balance-num {
+  font-size: 30px; font-weight: 700; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.nu-balance-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-3); margin-top: 5px;
+}
+.nu-balance-banner {
+  padding: 11px 14px; border-radius: 12px; text-align: center;
+  font-size: 14px; font-weight: 700; letter-spacing: -0.01em;
+}
+.nu-balance-banner.deficit { background: rgba(110,231,183,0.10); color: var(--good); }
+.nu-balance-banner.surplus { background: rgba(255,138,138,0.10); color: var(--bad); }
+.nu-balance-banner.neutral { background: rgba(255,255,255,0.04); color: var(--text-3); font-size: 12px; font-weight: 600; letter-spacing: 0; }
+.nu-balance-sub {
+  font-size: 11px; color: var(--text-4); font-family: var(--font-mono);
+  text-align: center; margin-top: 8px; min-height: 16px;
+}
 </style>
 </head>
 <body>
@@ -312,6 +344,22 @@ html, body {
     <div class="nu-cal-bar-wrap">
       <div class="nu-cal-bar" id="nuKcalBar" style="width:0%"></div>
     </div>
+  </div>
+
+  <!-- Burn & Balance -->
+  <div class="nu-balance-card">
+    <div class="nu-balance-row">
+      <div class="nu-balance-stat">
+        <div class="nu-balance-num" id="nuBurnNum" style="color:var(--c-kcal)">—</div>
+        <div class="nu-balance-lbl">Burned</div>
+      </div>
+      <div class="nu-balance-stat">
+        <div class="nu-balance-num" id="nuEatenBal" style="color:var(--text-2)">0</div>
+        <div class="nu-balance-lbl">Eaten</div>
+      </div>
+    </div>
+    <div class="nu-balance-banner neutral" id="nuBalanceBanner">Run Fitbit shortcut to see your deficit</div>
+    <div class="nu-balance-sub" id="nuBalanceSub"></div>
   </div>
 
   <!-- Macros -->
@@ -458,6 +506,30 @@ const $ = id => document.getElementById(id);
 
 const TARGETS_KEY = 'nu_targets';
 const LOG_KEY     = 'nu_log';
+const BURN_KEY    = 'nu_cal_burned';
+
+function dateKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// Capture cal_burned from iOS Shortcut URL param
+(function() {
+  const p = new URLSearchParams(location.search);
+  const cb = parseInt(p.get('cal_burned'));
+  if (cb > 0) {
+    localStorage.setItem(BURN_KEY, JSON.stringify({ date: dateKey(), kcal: cb }));
+    history.replaceState(null, '', location.pathname);
+  }
+})();
+
+function loadBurn() {
+  try {
+    const d = JSON.parse(localStorage.getItem(BURN_KEY));
+    if (d && d.date === dateKey()) return d.kcal;
+  } catch (e) {}
+  return null;
+}
 
 const DEFAULT_TARGETS = {
   training: { kcal: 2500, prot: 180, carb: 250, fat: 80 },
@@ -474,11 +546,6 @@ function loadTargets() {
 }
 function saveTargets(t) {
   try { localStorage.setItem(TARGETS_KEY, JSON.stringify(t)); } catch (e) {}
-}
-
-function dateKey() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
 function loadTodayLog() {
@@ -522,6 +589,34 @@ function pct(val, max) { return max ? Math.min(100, Math.round((val / max) * 100
 
 function fmt(n) { return n % 1 === 0 ? String(n) : n.toFixed(1); }
 
+function renderBalance() {
+  const burned = loadBurn();
+  const tot = totals();
+  $('nuEatenBal').textContent = tot.kcal;
+  if (burned == null) {
+    $('nuBurnNum').textContent = '—';
+    $('nuBalanceBanner').textContent = 'Run Fitbit shortcut to see your deficit';
+    $('nuBalanceBanner').className = 'nu-balance-banner neutral';
+    $('nuBalanceSub').textContent = '';
+    return;
+  }
+  $('nuBurnNum').textContent = burned.toLocaleString();
+  const diff = burned - tot.kcal;
+  if (diff > 0) {
+    $('nuBalanceBanner').textContent = diff.toLocaleString() + ' kcal deficit';
+    $('nuBalanceBanner').className = 'nu-balance-banner deficit';
+    $('nuBalanceSub').textContent = 'You can still eat ' + diff.toLocaleString() + ' kcal today';
+  } else if (diff < 0) {
+    $('nuBalanceBanner').textContent = Math.abs(diff).toLocaleString() + ' kcal surplus';
+    $('nuBalanceBanner').className = 'nu-balance-banner surplus';
+    $('nuBalanceSub').textContent = 'You\'ve eaten ' + Math.abs(diff).toLocaleString() + ' kcal more than you\'ve burned';
+  } else {
+    $('nuBalanceBanner').textContent = 'Perfectly balanced';
+    $('nuBalanceBanner').className = 'nu-balance-banner neutral';
+    $('nuBalanceSub').textContent = '';
+  }
+}
+
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -550,6 +645,8 @@ function render() {
   $('nuFatNum').textContent     = fmt(tot.fat);
   $('nuFatTarget').textContent  = t.fat;
   $('nuFatBar').style.width     = pct(tot.fat, t.fat) + '%';
+
+  renderBalance();
 
   const logEl = $('nuLog');
   if (!today.entries.length) {
