@@ -509,7 +509,7 @@ main {
 
 <main>
 
-  <!-- ===== WHOOP card (full) ===== -->
+  <!-- ===== FITBIT card (full) ===== -->
   <style>
     .whoop-section { margin-bottom: 32px; }
     .whoop-card {
@@ -603,17 +603,17 @@ main {
     .wh-err { background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.28); color:#FF8A8A; padding:10px 12px; border-radius:10px; font-size:11.5px; font-family:var(--font-mono); margin-bottom:14px; }
   </style>
   <div class="whoop-section">
-    <div class="section-title">Whoop</div>
+    <div class="section-title">Fitbit</div>
     <div class="whoop-card">
       <div id="whDisc" class="wh-disc">
-        <div class="wh-brand"><span class="wh-brand-mark">W</span><span class="wh-brand-text">WHOOP</span></div>
+        <div class="wh-brand"><span class="wh-brand-mark">F</span><span class="wh-brand-text">FITBIT</span></div>
         <div class="wh-disc-title">Not connected</div>
-        <div class="wh-disc-sub">Link your account to see live recovery, sleep, and strain.</div>
-        <button id="whConnectBtn" class="wh-connect" type="button">Connect WHOOP</button>
+        <div class="wh-disc-sub">Link your account to see live activity, sleep, and heart rate.</div>
+        <button id="whConnectBtn" class="wh-connect" type="button">Connect Fitbit</button>
       </div>
       <div id="whConn" style="display:none">
         <div class="wh-head">
-          <div class="wh-brand"><span class="wh-brand-mark">W</span><span class="wh-brand-text">WHOOP</span><span class="wh-live"><span class="wh-live-dot"></span>live</span></div>
+          <div class="wh-brand"><span class="wh-brand-mark">F</span><span class="wh-brand-text">FITBIT</span><span class="wh-live"><span class="wh-live-dot"></span>live</span></div>
           <div class="wh-head-right">
             <span id="whUpdated" class="wh-updated">—</span>
             <button id="whRefresh" class="wh-refresh" type="button" aria-label="Refresh"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/></svg></button>
@@ -627,7 +627,7 @@ main {
           </svg>
           <div class="wh-ring-center">
             <div id="whRecNum" class="wh-ring-num">—</div>
-            <div class="wh-ring-unit">recovery</div>
+            <div class="wh-ring-unit">% goal</div>
             <div id="whRecLabel" class="wh-ring-label">—</div>
           </div>
         </div>
@@ -648,14 +648,9 @@ main {
         </div>
         <div class="wh-stats">
           <div class="wh-stat"><span class="wh-zone" id="whZoneSleep"></span><div class="wh-stat-label">Sleep</div><div class="wh-stat-val" id="whSleep">—</div><div class="wh-stat-sub" id="whSleepSub">—</div></div>
-          <div class="wh-stat"><span class="wh-zone" id="whZoneStrain"></span><div class="wh-stat-label">Strain</div><div class="wh-stat-val" id="whStrain">—</div><div class="wh-stat-sub" id="whStrainSub">today</div></div>
-          <div class="wh-stat"><span class="wh-zone" id="whZoneHrv"></span><div class="wh-stat-label">HRV</div><div class="wh-stat-val" id="whHrv">—</div><div class="wh-stat-sub">ms</div></div>
+          <div class="wh-stat"><span class="wh-zone" id="whZoneStrain"></span><div class="wh-stat-label">Steps</div><div class="wh-stat-val" id="whStrain">—</div><div class="wh-stat-sub">today</div></div>
+          <div class="wh-stat"><span class="wh-zone" id="whZoneHrv"></span><div class="wh-stat-label">Active Mins</div><div class="wh-stat-val" id="whHrv">—</div><div class="wh-stat-sub">min</div></div>
           <div class="wh-stat"><span class="wh-zone" id="whZoneRhr"></span><div class="wh-stat-label">RHR</div><div class="wh-stat-val" id="whRhr">—</div><div class="wh-stat-sub">bpm</div></div>
-        </div>
-        <div id="whBio" class="wh-bio" style="display:none">
-          <div class="wh-bio-item"><span class="wh-zone" id="whZoneSkin"></span><span class="wh-bio-label">Skin temp</span><span class="wh-bio-val" id="whSkin">—</span></div>
-          <div class="wh-bio-item"><span class="wh-zone" id="whZoneSpo2"></span><span class="wh-bio-label">Blood O₂</span><span class="wh-bio-val" id="whSpo2">—</span></div>
-          <div class="wh-bio-item"><span class="wh-zone" id="whZoneResp"></span><span class="wh-bio-label">Resp rate</span><span class="wh-bio-val" id="whResp">—</span></div>
         </div>
         <div class="wh-legend">
           <span class="wh-leg-item"><span class="wh-zone z-good"></span>Good</span>
@@ -674,19 +669,19 @@ main {
   </div>
   <script>
   (function () {
-    const KEY = 'whoop_tokens_v1';
-    const CLIENT_ID = '3b9d1b01-31fb-4bd8-b18c-c7fa27deed2f';
-    const REDIRECT  = window.location.origin + '/api/whoop-callback';
-    const SCOPES    = 'read:recovery read:sleep read:workout read:cycles read:profile read:body_measurement offline';
+    const KEY       = 'fitbit_tokens_v1';
+    const CLIENT_ID = 'YOUR_FITBIT_CLIENT_ID'; // Replace after registering at dev.fitbit.com
+    const REDIRECT  = window.location.origin + '/api/fitbit-callback';
+    const SCOPES    = 'activity heartrate sleep profile';
 
     function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
     function save(t) { try { localStorage.setItem(KEY, JSON.stringify(t)); } catch {} }
     function wipe() { try { localStorage.removeItem(KEY); } catch {} }
 
-    if (location.hash && location.hash.indexOf('whoop_access') !== -1) {
+    if (location.hash && location.hash.indexOf('fitbit_access') !== -1) {
       const h = new URLSearchParams(location.hash.slice(1));
-      const access = h.get('whoop_access'), refresh = h.get('whoop_refresh');
-      const expires = Number(h.get('whoop_expires')) || Date.now() + 3500e3;
+      const access = h.get('fitbit_access'), refresh = h.get('fitbit_refresh');
+      const expires = Number(h.get('fitbit_expires')) || Date.now() + 28800e3;
       if (access) { save({ access, refresh, expires }); history.replaceState(null, '', location.pathname + location.search); }
     }
 
@@ -695,12 +690,11 @@ main {
     function showErr(m) { errEl.textContent = m || ''; errEl.style.display = m ? 'block' : 'none'; }
 
     $('whConnectBtn').addEventListener('click', () => {
-      const url = 'https://api.prod.whoop.com/oauth/oauth2/auth'
+      const url = 'https://www.fitbit.com/oauth2/authorize'
         + '?client_id='     + encodeURIComponent(CLIENT_ID)
         + '&redirect_uri='  + encodeURIComponent(REDIRECT)
         + '&response_type=code'
-        + '&scope='         + encodeURIComponent(SCOPES)
-        + '&state='         + Math.random().toString(36).slice(2);
+        + '&scope='         + encodeURIComponent(SCOPES);
       location.href = url;
     });
     $('whDisconnectBtn').addEventListener('click', () => { wipe(); render(); });
@@ -712,54 +706,45 @@ main {
     async function refreshTok(t) {
       if (!t.refresh) return null;
       try {
-        const r = await fetch('/api/whoop-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
+        const r = await fetch('/api/fitbit-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
         const j = await r.json();
         if (j.access_token) {
-          const next = { access: j.access_token, refresh: j.refresh_token || t.refresh, expires: Date.now() + (j.expires_in||3500)*1000 };
+          const next = { access: j.access_token, refresh: j.refresh_token || t.refresh, expires: Date.now() + (j.expires_in||28800)*1000 };
           save(next); return next;
         }
       } catch {}
       return null;
     }
-    async function whFetch(path, t) {
-      const [p, qs] = path.split('?');
-      const params = new URLSearchParams(qs || ''); params.set('path', p);
-      const r = await fetch('/api/whoop-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept':'application/json' } });
-      if (r.status === 401) { const n = await refreshTok(t); if (n) return whFetch(path, n); throw new Error('unauthorized — reconnect'); }
-      if (!r.ok) throw new Error('WHOOP ' + r.status + ': ' + (await r.text()));
+    async function fbFetch(path, t) {
+      const params = new URLSearchParams({ path });
+      const r = await fetch('/api/fitbit-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept': 'application/json' } });
+      if (r.status === 401) { const n = await refreshTok(t); if (n) return fbFetch(path, n); throw new Error('unauthorized — reconnect'); }
+      if (!r.ok) throw new Error('Fitbit ' + r.status + ': ' + (await r.text()));
       return await r.json();
     }
 
-    function fmtMins(ms) { const m = Math.round(ms/60000); const h = Math.floor(m/60); return h + 'h ' + String(m%60).padStart(2,'0') + 'm'; }
-    function fmtMinsShort(ms) { const m = Math.round(ms/60000); const h = Math.floor(m/60); return (h>0?h+'h ':'') + (m%60)+'m'; }
+    function fmtMins(mins) { const h = Math.floor(mins/60); return h + 'h ' + String(mins%60).padStart(2,'0') + 'm'; }
+    function fmtMinsShort(mins) { const h = Math.floor(mins/60); return (h>0?h+'h ':'') + (mins%60)+'m'; }
     function zone(el, c) { el.className = 'wh-zone'; if (c) el.classList.add('z-' + c); }
-    function recoveryZone(v) { if (v == null) return null; if (v >= 67) return 'good'; if (v >= 34) return 'warn'; return 'bad'; }
-    function sleepZone(p) { if (p == null) return null; if (p >= 85) return 'good'; if (p >= 70) return 'norm'; return 'warn'; }
-    function strainZone(s) { if (s == null) return null; if (s < 6) return 'norm'; if (s < 14) return 'good'; if (s < 18) return 'warn'; return 'bad'; }
-    function hrvZone(h) { if (h == null) return null; if (h >= 60) return 'good'; if (h >= 40) return 'norm'; return 'warn'; }
+    function sleepZone(h) { if (h == null) return null; if (h >= 7) return 'good'; if (h >= 5.5) return 'norm'; return 'warn'; }
+    function stepsZone(s) { if (s == null) return null; if (s >= 10000) return 'good'; if (s >= 7500) return 'norm'; if (s >= 5000) return 'warn'; return 'bad'; }
+    function activeZone(m) { if (m == null) return null; if (m >= 30) return 'good'; if (m >= 15) return 'norm'; return 'warn'; }
     function rhrZone(r) { if (r == null) return null; if (r <= 55) return 'good'; if (r <= 70) return 'norm'; return 'warn'; }
-    function tempZone(t) { if (t == null) return null; if (t >= 32.5 && t <= 34) return 'good'; if (t >= 31 && t <= 35) return 'norm'; return 'warn'; }
-    function spo2Zone(s) { if (s == null) return null; if (s >= 95) return 'good'; if (s >= 92) return 'norm'; if (s >= 88) return 'warn'; return 'bad'; }
-    function respZone(r) { if (r == null) return null; if (r >= 12 && r <= 18) return 'good'; if (r >= 10 && r <= 22) return 'norm'; return 'warn'; }
 
-    function ringStroke(score) {
-      // green > yellow > red
-      if (score >= 67) return '#6BE3A4';
-      if (score >= 34) return '#F2C063';
+    function ringStroke(pct) {
+      if (pct >= 100) return '#6BE3A4';
+      if (pct >= 75)  return '#60A5FA';
+      if (pct >= 50)  return '#F2C063';
       return '#FF8A8A';
     }
-    function recoveryLabel(score) {
-      if (score >= 67) return 'Go hard today';
-      if (score >= 34) return 'Moderate — listen to body';
-      return 'Recover today';
-    }
 
-    function verdict(rec, strain, sleepPerf) {
-      if (rec == null) return null;
-      let cls = 'green', badge = 'GREEN', headline = 'Push hard today. Body\'s primed — go for the PR, do the harder workout, take on the heavy task.';
-      if (rec < 67 && rec >= 34) { cls = 'yellow'; badge = 'YELLOW'; headline = 'Moderate day. Train, but don\'t max out. Stick to planned volume, skip the max effort sets.'; }
-      else if (rec < 34) { cls = 'red'; badge = 'RED'; headline = 'Recover. Body is asking for rest — light movement, walk, mobility, sleep early.'; }
-      return { cls, badge, headline };
+    function verdict(steps, sleepHrs) {
+      if (steps == null && sleepHrs == null) return null;
+      const goodSteps = steps != null && steps >= 8000;
+      const goodSleep = sleepHrs != null && sleepHrs >= 6.5;
+      if (goodSteps && goodSleep) return { cls:'green', badge:'GREEN', headline:'Active day and solid sleep — body is primed. Push hard in training.' };
+      if (goodSteps || goodSleep) return { cls:'yellow', badge:'YELLOW', headline:'Decent activity or sleep — moderate effort today, don\'t max out.' };
+      return { cls:'red', badge:'RED', headline:'Low activity and short sleep — focus on recovery, light movement only.' };
     }
 
     async function loadData() {
@@ -767,97 +752,73 @@ main {
       if (t.expires && Date.now() > t.expires - 60000) { const n = await refreshTok(t); if (n) t = n; }
       showErr('');
       try {
-        const [rec, sleep, cycle] = await Promise.all([
-          whFetch('/recovery?limit=1', t).catch((e)=>{console.error('[whoop] recovery', e.message); return null;}),
-          whFetch('/activity/sleep?limit=1', t).catch((e)=>{console.error('[whoop] sleep', e.message); return null;}),
-          whFetch('/cycle?limit=1', t).catch((e)=>{console.error('[whoop] cycle', e.message); return null;}),
+        const today = new Date().toISOString().slice(0, 10);
+        const [heartData, sleepData, activityData] = await Promise.all([
+          fbFetch('/1/user/-/activities/heart/date/today/1d.json', t).catch(() => null),
+          fbFetch('/1.2/user/-/sleep/date/' + today + '.json', t).catch(() => null),
+          fbFetch('/1/user/-/activities/date/today.json', t).catch(() => null),
         ]);
 
-        let recScore = null, hrv = null, rhr = null, skin = null, spo2 = null;
-        const r0 = rec && rec.records && rec.records[0];
-        if (r0 && r0.score) {
-          recScore = Math.round(r0.score.recovery_score || 0);
-          hrv = r0.score.hrv_rmssd_milli != null ? Math.round(r0.score.hrv_rmssd_milli) : null;
-          rhr = r0.score.resting_heart_rate != null ? Math.round(r0.score.resting_heart_rate) : null;
-          skin = r0.score.skin_temp_celsius != null ? r0.score.skin_temp_celsius : null;
-          spo2 = r0.score.spo2_percentage != null ? r0.score.spo2_percentage : null;
+        // Steps & active minutes
+        let steps = null, activeMins = null;
+        if (activityData && activityData.summary) {
+          const s = activityData.summary;
+          steps = s.steps != null ? s.steps : null;
+          activeMins = ((s.fairlyActiveMinutes || 0) + (s.veryActiveMinutes || 0)) || null;
         }
 
-        // Ring
+        // Resting HR
+        let rhr = null;
+        if (heartData && heartData['activities-heart'] && heartData['activities-heart'][0]) {
+          rhr = heartData['activities-heart'][0].value.restingHeartRate || null;
+        }
+
+        // Steps ring
+        const stepsPct = steps != null ? Math.min(100, Math.round(steps / 10000 * 100)) : null;
         const fill = $('whRingFill');
         const C = 603.19;
-        if (recScore != null) {
-          fill.style.strokeDashoffset = String(C * (1 - recScore/100));
-          fill.style.stroke = ringStroke(recScore);
-          $('whRecNum').textContent = String(recScore);
+        if (stepsPct != null) {
+          fill.style.strokeDashoffset = String(C * (1 - stepsPct/100));
+          fill.style.stroke = ringStroke(stepsPct);
+          $('whRecNum').textContent = String(stepsPct);
           const labelEl = $('whRecLabel');
-          labelEl.textContent = recoveryLabel(recScore);
-          labelEl.style.color = ringStroke(recScore);
+          labelEl.textContent = steps.toLocaleString() + ' steps';
+          labelEl.style.color = ringStroke(stepsPct);
         }
 
         // Sleep
-        let sleepPerf = null, sleepDuration = null, resp = null;
-        const s0 = sleep && sleep.records && sleep.records[0];
-        if (s0 && s0.score) {
-          sleepPerf = Math.round(s0.score.sleep_performance_percentage || 0);
-          resp = s0.score.respiratory_rate != null ? Number(s0.score.respiratory_rate).toFixed(1) : null;
-          if (s0.score.stage_summary) {
-            const ss = s0.score.stage_summary;
-            const inBed = ss.total_in_bed_time_milli || 0;
-            const awake = ss.total_awake_time_milli || 0;
-            sleepDuration = inBed - awake;
-            const rem = ss.total_rem_sleep_time_milli || 0;
-            const deep = ss.total_slow_wave_sleep_time_milli || 0;
-            const light = ss.total_light_sleep_time_milli || 0;
-            const total = rem + deep + light + awake;
+        let sleepHrs = null;
+        if (sleepData && sleepData.summary) {
+          const sm = sleepData.summary;
+          const totalMins = sm.totalMinutesAsleep || 0;
+          sleepHrs = totalMins / 60;
+          $('whSleep').textContent = fmtMins(totalMins);
+          $('whSleepSub').textContent = 'asleep';
+          zone($('whZoneSleep'), sleepZone(sleepHrs));
+          if (sm.stages) {
+            const { deep, light, rem, wake } = sm.stages;
+            const total = (deep||0) + (light||0) + (rem||0) + (wake||0);
             if (total > 0) {
               $('whStages').style.display = '';
-              $('whBarRem').style.width   = (100*rem/total)   + '%';
-              $('whBarDeep').style.width  = (100*deep/total)  + '%';
-              $('whBarLight').style.width = (100*light/total) + '%';
-              $('whBarAwake').style.width = (100*awake/total) + '%';
+              $('whBarRem').style.width   = (100*(rem||0)/total) + '%';
+              $('whBarDeep').style.width  = (100*(deep||0)/total) + '%';
+              $('whBarLight').style.width = (100*(light||0)/total) + '%';
+              $('whBarAwake').style.width = (100*(wake||0)/total) + '%';
               $('whStagesMeta').textContent = fmtMins(total) + ' total';
-              $('whRem').textContent   = fmtMinsShort(rem);
-              $('whDeep').textContent  = fmtMinsShort(deep);
-              $('whLight').textContent = fmtMinsShort(light);
-              $('whAwake').textContent = fmtMinsShort(awake);
+              $('whRem').textContent   = fmtMinsShort(rem||0);
+              $('whDeep').textContent  = fmtMinsShort(deep||0);
+              $('whLight').textContent = fmtMinsShort(light||0);
+              $('whAwake').textContent = fmtMinsShort(wake||0);
             }
           }
         }
-        if (sleepPerf != null) {
-          $('whSleep').textContent = sleepPerf + '%';
-          const hrs = sleepDuration ? (sleepDuration/3.6e6).toFixed(1) + 'h' : '—';
-          $('whSleepSub').textContent = hrs;
-          zone($('whZoneSleep'), sleepZone(sleepPerf));
-        }
 
-        // Strain
-        let strain = null, kcal = null;
-        const c0 = cycle && cycle.records && cycle.records[0];
-        if (c0 && c0.score && c0.score.strain != null) {
-          strain = Number(c0.score.strain);
-          $('whStrain').textContent = strain.toFixed(1);
-          if (c0.score.kilojoule != null) {
-            kcal = Math.round(c0.score.kilojoule / 4.184);
-            $('whStrainSub').textContent = kcal + ' kcal';
-          }
-          zone($('whZoneStrain'), strainZone(strain));
-        }
-
-        if (hrv != null) { $('whHrv').textContent = String(hrv); zone($('whZoneHrv'), hrvZone(hrv)); }
-        if (rhr != null) { $('whRhr').textContent = String(rhr); zone($('whZoneRhr'), rhrZone(rhr)); }
-
-        // Biomarkers
-        const anyBio = (skin != null) || (spo2 != null) || (resp != null);
-        if (anyBio) {
-          $('whBio').style.display = '';
-          if (skin != null) { $('whSkin').textContent = Number(skin).toFixed(1) + '°C'; zone($('whZoneSkin'), tempZone(skin)); }
-          if (spo2 != null) { $('whSpo2').textContent = Number(spo2).toFixed(1) + '%'; zone($('whZoneSpo2'), spo2Zone(spo2)); }
-          if (resp != null) { $('whResp').textContent = resp + ' br/min'; zone($('whZoneResp'), respZone(Number(resp))); }
-        }
+        if (steps != null)      { $('whStrain').textContent = steps.toLocaleString(); zone($('whZoneStrain'), stepsZone(steps)); }
+        if (activeMins != null) { $('whHrv').textContent = String(activeMins); zone($('whZoneHrv'), activeZone(activeMins)); }
+        if (rhr != null)        { $('whRhr').textContent = String(rhr); zone($('whZoneRhr'), rhrZone(rhr)); }
 
         // Verdict
-        const v = verdict(recScore, strain, sleepPerf);
+        const v = verdict(steps, sleepHrs);
         if (v) {
           $('whVerdict').style.display = '';
           const badge = $('whVerdictBadge');
@@ -865,15 +826,13 @@ main {
           badge.className = 'wh-verdict-badge ' + v.cls;
           $('whVerdictHead').textContent = v.headline;
           const reasons = [];
-          if (sleepPerf != null) reasons.push((sleepPerf >= 80 ? '✓' : '·') + ' Sleep score ' + sleepPerf + '% — ' + (sleepPerf >= 80 ? 'you slept well.' : 'sub-par sleep.'));
-          if (strain != null)   reasons.push((strain < 14 ? '·' : '✓') + ' Strain ' + strain.toFixed(1) + ' yesterday — ' + (strain < 14 ? 'room to push today if recovery allows.' : 'high load logged.'));
-          if (hrv != null)      reasons.push((hrv >= 50 ? '✓' : '·') + ' HRV ' + hrv + 'ms — ' + (hrv >= 50 ? 'strong autonomic state.' : 'autonomic stress.'));
-          if (rhr != null)      reasons.push((rhr <= 60 ? '✓' : '·') + ' RHR ' + rhr + 'bpm — ' + (rhr <= 60 ? 'well-conditioned.' : 'elevated.'));
+          if (steps != null)     reasons.push((steps >= 8000 ? '✓' : '·') + ' Steps ' + steps.toLocaleString() + ' — ' + (steps >= 10000 ? 'goal hit.' : steps >= 7500 ? 'on track.' : 'behind pace.'));
+          if (sleepHrs != null)  reasons.push((sleepHrs >= 7 ? '✓' : '·') + ' Sleep ' + fmtMins(Math.round(sleepHrs*60)) + ' — ' + (sleepHrs >= 7 ? 'well rested.' : sleepHrs >= 5.5 ? 'adequate.' : 'short night.'));
+          if (rhr != null)       reasons.push((rhr <= 60 ? '✓' : '·') + ' RHR ' + rhr + ' bpm — ' + (rhr <= 55 ? 'excellent.' : rhr <= 70 ? 'normal.' : 'elevated.'));
           $('whVerdictReasons').innerHTML = reasons.join('<br>');
         }
 
-        const now = new Date();
-        $('whUpdated').textContent = 'Updated ' + now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        $('whUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
       } catch (e) {
         showErr(e.message || String(e));
       }

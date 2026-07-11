@@ -399,14 +399,14 @@ body::after {
 
     <div class="section-divider"></div>
 
-    <label class="field-label">WHOOP</label>
+    <label class="field-label">FITBIT</label>
     <div class="whoop-box">
       <div class="whoop-row">
         <span class="whoop-status" id="whStatus"><span class="dot"></span><span id="whStatusText">Not connected</span></span>
         <span class="whoop-sync" id="whSync"></span>
       </div>
       <div class="whoop-stats" id="whStats" style="display:none">
-        <div class="whoop-stat"><div class="v" id="whRec">—</div><div class="l">Recovery</div></div>
+        <div class="whoop-stat"><div class="v" id="whRec">—</div><div class="l">Steps</div></div>
         <div class="whoop-stat"><div class="v" id="whSleep">—</div><div class="l">Sleep</div></div>
         <div class="whoop-stat"><div class="v" id="whRhr">—</div><div class="l">Rest HR</div></div>
       </div>
@@ -420,8 +420,8 @@ body::after {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const WATER_KEY = 'po_water_v1';
-  const WHOOP_KEY = 'whoop_tokens_v1';
-  const SYNC_KEY  = 'whoop_last_sync';
+  const WHOOP_KEY = 'fitbit_tokens_v1';
+  const SYNC_KEY  = 'fitbit_last_sync';
 
   function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
   function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
@@ -516,7 +516,7 @@ body::after {
   }));
   $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
 
-  /* ---------- WHOOP ---------- */
+  /* ---------- FITBIT ---------- */
   let whStats = null;
   function relTime(ts) {
     if (!ts) return 'never';
@@ -541,26 +541,25 @@ body::after {
     action.textContent = 'Sync now';
     if (whStats) {
       $('whStats').style.display = '';
-      $('whRec').textContent   = whStats.rec   != null ? whStats.rec + '%'  : '—';
-      $('whSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
-      $('whRhr').textContent   = whStats.rhr   != null ? whStats.rhr         : '—';
+      $('whRec').textContent   = whStats.steps != null ? whStats.steps.toLocaleString() : '—';
+      $('whSleep').textContent = whStats.sleep != null ? whStats.sleep : '—';
+      $('whRhr').textContent   = whStats.rhr   != null ? whStats.rhr   : '—';
     }
   }
   async function wRefresh(t) {
     if (!t.refresh) return null;
     try {
-      const r = await fetch('/api/whoop-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
+      const r = await fetch('/api/fitbit-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
       const j = await r.json();
-      if (j.access_token) { const n = { access:j.access_token, refresh:j.refresh_token||t.refresh, expires:Date.now()+(j.expires_in||3500)*1000 }; saveJSON(WHOOP_KEY, n); return n; }
+      if (j.access_token) { const n = { access:j.access_token, refresh:j.refresh_token||t.refresh, expires:Date.now()+(j.expires_in||28800)*1000 }; saveJSON(WHOOP_KEY, n); return n; }
     } catch (e) {}
     return null;
   }
   async function wFetch(path, t) {
-    const [p, qs] = path.split('?');
-    const params = new URLSearchParams(qs || ''); params.set('path', p);
-    const r = await fetch('/api/whoop-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept':'application/json' } });
+    const params = new URLSearchParams({ path });
+    const r = await fetch('/api/fitbit-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept':'application/json' } });
     if (r.status === 401) { const n = await wRefresh(t); if (n) return wFetch(path, n); throw new Error('unauthorized'); }
-    if (!r.ok) throw new Error('whoop ' + r.status);
+    if (!r.ok) throw new Error('fitbit ' + r.status);
     return r.json();
   }
   async function syncWhoop() {
@@ -568,17 +567,22 @@ body::after {
     if (!t || !t.access) return;
     if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
     try {
-      const [rec, sleep] = await Promise.all([
-        wFetch('/recovery?limit=1', t).catch(()=>null),
-        wFetch('/activity/sleep?limit=1', t).catch(()=>null),
+      const today = new Date().toISOString().slice(0, 10);
+      const [heartData, sleepData, activityData] = await Promise.all([
+        wFetch('/1/user/-/activities/heart/date/today/1d.json', t).catch(()=>null),
+        wFetch('/1.2/user/-/sleep/date/' + today + '.json', t).catch(()=>null),
+        wFetch('/1/user/-/activities/date/today.json', t).catch(()=>null),
       ]);
-      const r0 = rec && rec.records && rec.records[0];
-      const s0 = sleep && sleep.records && sleep.records[0];
-      whStats = {
-        rec:   r0 && r0.score && r0.score.recovery_score != null ? Math.round(r0.score.recovery_score) : null,
-        rhr:   r0 && r0.score && r0.score.resting_heart_rate != null ? Math.round(r0.score.resting_heart_rate) : null,
-        sleep: s0 && s0.score && s0.score.sleep_performance_percentage != null ? Math.round(s0.score.sleep_performance_percentage) : null,
-      };
+      let steps = null, rhr = null, sleep = null;
+      if (activityData && activityData.summary) steps = activityData.summary.steps || null;
+      if (heartData && heartData['activities-heart'] && heartData['activities-heart'][0])
+        rhr = heartData['activities-heart'][0].value.restingHeartRate || null;
+      if (sleepData && sleepData.summary) {
+        const m = sleepData.summary.totalMinutesAsleep || 0;
+        const h = Math.floor(m/60);
+        sleep = h + 'h ' + String(m%60).padStart(2,'0') + 'm';
+      }
+      whStats = { steps, rhr, sleep };
       localStorage.setItem(SYNC_KEY, String(Date.now()));
       renderWhoop();
     } catch (e) { renderWhoop(e); }
