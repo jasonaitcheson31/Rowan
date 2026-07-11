@@ -33,12 +33,16 @@ const CONFIG = {
   appTitle: "Water Coach",
 
   // Default unit. Options: "bottle" | "glass" | "oz" | "ml"
-  unit: "bottle",
+  unit: "ml",
 
   // Volume per "bottle" / "glass" in ml. 500 = standard water bottle,
   // 250 = a typical drinking glass.
   bottleMl: 500,
   glassMl: 250,
+
+  // Fixed daily target in ml. Overrides the formula-based calculation.
+  // Set to null to use the formula instead.
+  manualTargetMl: 4000,
 
   // Default user profile (gets overwritten by what you save in Settings).
   profile: {
@@ -705,6 +709,7 @@ html, body {
     s.caffeineMgPerDay = (s.caffeineMgPerDay != null) ? s.caffeineMgPerDay : (CONFIG.caffeineMgPerDay || 200);
     s.substances = Array.isArray(s.substances) ? s.substances : (CONFIG.defaultSubstances || []);
     s.logs = (s.logs && typeof s.logs === 'object') ? s.logs : {};  // {YYYY-MM-DD: number_of_servings}
+    s.manualTargetMl = (s.manualTargetMl != null) ? s.manualTargetMl : (CONFIG.manualTargetMl || null);
     return s;
   }
   function saveState() {
@@ -736,6 +741,9 @@ html, body {
   //   adjustments: +200 ml male, +100 ml age 50+
   // ============================================================
   function computeTargetMl() {
+    if (state.manualTargetMl) {
+      return { base: state.manualTargetMl, exercise: 0, caffeine: 0, subs: 0, adjust: 0, total: state.manualTargetMl, manual: true };
+    }
     const p = state.profile;
     const wKg = state.weightUnit === 'lb' ? p.weightKg / 2.20462 : p.weightKg;
     const base = wKg * 35;
