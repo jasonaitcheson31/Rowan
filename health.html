@@ -603,17 +603,17 @@ main {
     .wh-err { background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.28); color:#FF8A8A; padding:10px 12px; border-radius:10px; font-size:11.5px; font-family:var(--font-mono); margin-bottom:14px; }
   </style>
   <div class="whoop-section">
-    <div class="section-title">Fitbit</div>
+    <div class="section-title">Google Fit</div>
     <div class="whoop-card">
       <div id="whDisc" class="wh-disc">
-        <div class="wh-brand"><span class="wh-brand-mark">F</span><span class="wh-brand-text">FITBIT</span></div>
+        <div class="wh-brand"><span class="wh-brand-mark">G</span><span class="wh-brand-text">GOOGLE FIT</span></div>
         <div class="wh-disc-title">Not connected</div>
-        <div class="wh-disc-sub">Link your account to see live activity, sleep, and heart rate.</div>
-        <button id="whConnectBtn" class="wh-connect" type="button">Connect Fitbit</button>
+        <div class="wh-disc-sub">Link your Google account to see live activity, sleep, and heart rate from your Fitbit via Google Fit.</div>
+        <button id="whConnectBtn" class="wh-connect" type="button">Connect Google Fit</button>
       </div>
       <div id="whConn" style="display:none">
         <div class="wh-head">
-          <div class="wh-brand"><span class="wh-brand-mark">F</span><span class="wh-brand-text">FITBIT</span><span class="wh-live"><span class="wh-live-dot"></span>live</span></div>
+          <div class="wh-brand"><span class="wh-brand-mark">G</span><span class="wh-brand-text">GOOGLE FIT</span><span class="wh-live"><span class="wh-live-dot"></span>live</span></div>
           <div class="wh-head-right">
             <span id="whUpdated" class="wh-updated">—</span>
             <button id="whRefresh" class="wh-refresh" type="button" aria-label="Refresh"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15A9 9 0 1 1 5.64 5.64L23 10"/></svg></button>
@@ -669,19 +669,19 @@ main {
   </div>
   <script>
   (function () {
-    const KEY       = 'fitbit_tokens_v1';
-    const CLIENT_ID = 'YOUR_FITBIT_CLIENT_ID'; // Replace after registering at dev.fitbit.com
-    const REDIRECT  = window.location.origin + '/api/fitbit-callback';
-    const SCOPES    = 'activity heartrate sleep profile';
+    const KEY       = 'google_tokens_v1';
+    const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID'; // Replace with your Google Cloud Console Client ID
+    const REDIRECT  = window.location.origin + '/api/google-callback';
+    const SCOPES    = 'https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.heart_rate.read https://www.googleapis.com/auth/fitness.sleep.read';
 
     function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
     function save(t) { try { localStorage.setItem(KEY, JSON.stringify(t)); } catch {} }
     function wipe() { try { localStorage.removeItem(KEY); } catch {} }
 
-    if (location.hash && location.hash.indexOf('fitbit_access') !== -1) {
+    if (location.hash && location.hash.indexOf('google_access') !== -1) {
       const h = new URLSearchParams(location.hash.slice(1));
-      const access = h.get('fitbit_access'), refresh = h.get('fitbit_refresh');
-      const expires = Number(h.get('fitbit_expires')) || Date.now() + 28800e3;
+      const access = h.get('google_access'), refresh = h.get('google_refresh');
+      const expires = Number(h.get('google_expires')) || Date.now() + 3600e3;
       if (access) { save({ access, refresh, expires }); history.replaceState(null, '', location.pathname + location.search); }
     }
 
@@ -690,11 +690,13 @@ main {
     function showErr(m) { errEl.textContent = m || ''; errEl.style.display = m ? 'block' : 'none'; }
 
     $('whConnectBtn').addEventListener('click', () => {
-      const url = 'https://www.fitbit.com/oauth2/authorize'
+      const url = 'https://accounts.google.com/o/oauth2/v2/auth'
         + '?client_id='     + encodeURIComponent(CLIENT_ID)
         + '&redirect_uri='  + encodeURIComponent(REDIRECT)
         + '&response_type=code'
-        + '&scope='         + encodeURIComponent(SCOPES);
+        + '&scope='         + encodeURIComponent(SCOPES)
+        + '&access_type=offline'
+        + '&prompt=consent';
       location.href = url;
     });
     $('whDisconnectBtn').addEventListener('click', () => { wipe(); render(); });
@@ -706,29 +708,30 @@ main {
     async function refreshTok(t) {
       if (!t.refresh) return null;
       try {
-        const r = await fetch('/api/fitbit-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
+        const r = await fetch('/api/google-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
         const j = await r.json();
         if (j.access_token) {
-          const next = { access: j.access_token, refresh: j.refresh_token || t.refresh, expires: Date.now() + (j.expires_in||28800)*1000 };
+          const next = { access: j.access_token, refresh: t.refresh, expires: Date.now() + (j.expires_in||3600)*1000 };
           save(next); return next;
         }
       } catch {}
       return null;
     }
-    async function fbFetch(path, t) {
-      const params = new URLSearchParams({ path });
-      const r = await fetch('/api/fitbit-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept': 'application/json' } });
-      if (r.status === 401) { const n = await refreshTok(t); if (n) return fbFetch(path, n); throw new Error('unauthorized — reconnect'); }
-      if (!r.ok) throw new Error('Fitbit ' + r.status + ': ' + (await r.text()));
+
+    async function gFetch(path, t, opts = {}) {
+      const url = 'https://www.googleapis.com/fitness/v1' + path;
+      const headers = { 'Authorization': 'Bearer ' + t.access, 'Accept': 'application/json' };
+      if (opts.body) headers['Content-Type'] = 'application/json';
+      const r = await fetch(url, { method: opts.body ? 'POST' : 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+      if (r.status === 401) { const n = await refreshTok(t); if (n) return gFetch(path, n, opts); throw new Error('unauthorized — reconnect'); }
+      if (!r.ok) throw new Error('Google Fit ' + r.status + ': ' + (await r.text()));
       return await r.json();
     }
 
     function fmtMins(mins) { const h = Math.floor(mins/60); return h + 'h ' + String(mins%60).padStart(2,'0') + 'm'; }
-    function fmtMinsShort(mins) { const h = Math.floor(mins/60); return (h>0?h+'h ':'') + (mins%60)+'m'; }
     function zone(el, c) { el.className = 'wh-zone'; if (c) el.classList.add('z-' + c); }
     function sleepZone(h) { if (h == null) return null; if (h >= 7) return 'good'; if (h >= 5.5) return 'norm'; return 'warn'; }
     function stepsZone(s) { if (s == null) return null; if (s >= 10000) return 'good'; if (s >= 7500) return 'norm'; if (s >= 5000) return 'warn'; return 'bad'; }
-    function activeZone(m) { if (m == null) return null; if (m >= 30) return 'good'; if (m >= 15) return 'norm'; return 'warn'; }
     function rhrZone(r) { if (r == null) return null; if (r <= 55) return 'good'; if (r <= 70) return 'norm'; return 'warn'; }
 
     function ringStroke(pct) {
@@ -752,25 +755,49 @@ main {
       if (t.expires && Date.now() > t.expires - 60000) { const n = await refreshTok(t); if (n) t = n; }
       showErr('');
       try {
-        const today = new Date().toISOString().slice(0, 10);
-        const [heartData, sleepData, activityData] = await Promise.all([
-          fbFetch('/1/user/-/activities/heart/date/today/1d.json', t).catch(() => null),
-          fbFetch('/1.2/user/-/sleep/date/' + today + '.json', t).catch(() => null),
-          fbFetch('/1/user/-/activities/date/today.json', t).catch(() => null),
+        const now = Date.now();
+        const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+        const startMs = startOfDay.getTime();
+        const aggBody = (dataType) => ({
+          aggregateBy: [{ dataTypeName: dataType }],
+          bucketByTime: { durationMillis: Math.max(now - startMs, 1) },
+          startTimeMillis: startMs,
+          endTimeMillis: now,
+        });
+        const yesterday = new Date(now - 86400000).toISOString();
+        const todayStr  = new Date(now).toISOString();
+
+        const [stepsData, hrData, sleepData] = await Promise.all([
+          gFetch('/users/me/dataset:aggregate', t, { body: aggBody('com.google.step_count.delta') }).catch(() => null),
+          gFetch('/users/me/dataset:aggregate', t, { body: aggBody('com.google.heart_rate.bpm') }).catch(() => null),
+          gFetch(`/users/me/sessions?activityType=72&startTime=${yesterday}&endTime=${todayStr}`, t).catch(() => null),
         ]);
 
-        // Steps & active minutes
-        let steps = null, activeMins = null;
-        if (activityData && activityData.summary) {
-          const s = activityData.summary;
-          steps = s.steps != null ? s.steps : null;
-          activeMins = ((s.fairlyActiveMinutes || 0) + (s.veryActiveMinutes || 0)) || null;
+        // Steps
+        let steps = null;
+        if (stepsData && stepsData.bucket) {
+          const total = stepsData.bucket.reduce((sum, b) =>
+            sum + (b.dataset?.[0]?.point || []).reduce((s, p) => s + (p.value?.[0]?.intVal || 0), 0), 0);
+          if (total > 0) steps = total;
         }
 
-        // Resting HR
+        // Resting HR — use minimum BPM reading of the day as proxy
         let rhr = null;
-        if (heartData && heartData['activities-heart'] && heartData['activities-heart'][0]) {
-          rhr = heartData['activities-heart'][0].value.restingHeartRate || null;
+        if (hrData && hrData.bucket) {
+          const vals = hrData.bucket.flatMap(b => (b.dataset?.[0]?.point || [])
+            .map(p => p.value?.[0]?.fpVal)).filter(v => v && v > 30);
+          if (vals.length) rhr = Math.round(Math.min(...vals));
+        }
+
+        // Sleep from sessions
+        let sleepHrs = null, totalSleepMins = null;
+        if (sleepData && sleepData.session && sleepData.session.length) {
+          let totalMs = 0;
+          for (const s of sleepData.session) {
+            totalMs += parseInt(s.endTimeMillis) - parseInt(s.startTimeMillis);
+          }
+          totalSleepMins = Math.round(totalMs / 60000);
+          if (totalSleepMins > 0) sleepHrs = totalSleepMins / 60;
         }
 
         // Steps ring
@@ -787,35 +814,14 @@ main {
         }
 
         // Sleep
-        let sleepHrs = null;
-        if (sleepData && sleepData.summary) {
-          const sm = sleepData.summary;
-          const totalMins = sm.totalMinutesAsleep || 0;
-          sleepHrs = totalMins / 60;
-          $('whSleep').textContent = fmtMins(totalMins);
+        if (totalSleepMins != null) {
+          $('whSleep').textContent = fmtMins(totalSleepMins);
           $('whSleepSub').textContent = 'asleep';
           zone($('whZoneSleep'), sleepZone(sleepHrs));
-          if (sm.stages) {
-            const { deep, light, rem, wake } = sm.stages;
-            const total = (deep||0) + (light||0) + (rem||0) + (wake||0);
-            if (total > 0) {
-              $('whStages').style.display = '';
-              $('whBarRem').style.width   = (100*(rem||0)/total) + '%';
-              $('whBarDeep').style.width  = (100*(deep||0)/total) + '%';
-              $('whBarLight').style.width = (100*(light||0)/total) + '%';
-              $('whBarAwake').style.width = (100*(wake||0)/total) + '%';
-              $('whStagesMeta').textContent = fmtMins(total) + ' total';
-              $('whRem').textContent   = fmtMinsShort(rem||0);
-              $('whDeep').textContent  = fmtMinsShort(deep||0);
-              $('whLight').textContent = fmtMinsShort(light||0);
-              $('whAwake').textContent = fmtMinsShort(wake||0);
-            }
-          }
         }
 
-        if (steps != null)      { $('whStrain').textContent = steps.toLocaleString(); zone($('whZoneStrain'), stepsZone(steps)); }
-        if (activeMins != null) { $('whHrv').textContent = String(activeMins); zone($('whZoneHrv'), activeZone(activeMins)); }
-        if (rhr != null)        { $('whRhr').textContent = String(rhr); zone($('whZoneRhr'), rhrZone(rhr)); }
+        if (steps != null) { $('whStrain').textContent = steps.toLocaleString(); zone($('whZoneStrain'), stepsZone(steps)); }
+        if (rhr != null)   { $('whRhr').textContent = String(rhr); zone($('whZoneRhr'), rhrZone(rhr)); }
 
         // Verdict
         const v = verdict(steps, sleepHrs);
@@ -826,9 +832,9 @@ main {
           badge.className = 'wh-verdict-badge ' + v.cls;
           $('whVerdictHead').textContent = v.headline;
           const reasons = [];
-          if (steps != null)     reasons.push((steps >= 8000 ? '✓' : '·') + ' Steps ' + steps.toLocaleString() + ' — ' + (steps >= 10000 ? 'goal hit.' : steps >= 7500 ? 'on track.' : 'behind pace.'));
-          if (sleepHrs != null)  reasons.push((sleepHrs >= 7 ? '✓' : '·') + ' Sleep ' + fmtMins(Math.round(sleepHrs*60)) + ' — ' + (sleepHrs >= 7 ? 'well rested.' : sleepHrs >= 5.5 ? 'adequate.' : 'short night.'));
-          if (rhr != null)       reasons.push((rhr <= 60 ? '✓' : '·') + ' RHR ' + rhr + ' bpm — ' + (rhr <= 55 ? 'excellent.' : rhr <= 70 ? 'normal.' : 'elevated.'));
+          if (steps != null)    reasons.push((steps >= 8000 ? '✓' : '·') + ' Steps ' + steps.toLocaleString() + ' — ' + (steps >= 10000 ? 'goal hit.' : steps >= 7500 ? 'on track.' : 'behind pace.'));
+          if (sleepHrs != null) reasons.push((sleepHrs >= 7 ? '✓' : '·') + ' Sleep ' + fmtMins(Math.round(sleepHrs*60)) + ' — ' + (sleepHrs >= 7 ? 'well rested.' : sleepHrs >= 5.5 ? 'adequate.' : 'short night.'));
+          if (rhr != null)      reasons.push((rhr <= 60 ? '✓' : '·') + ' RHR ' + rhr + ' bpm — ' + (rhr <= 55 ? 'excellent.' : rhr <= 70 ? 'normal.' : 'elevated.'));
           $('whVerdictReasons').innerHTML = reasons.join('<br>');
         }
 

@@ -420,8 +420,8 @@ body::after {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const WATER_KEY = 'po_water_v1';
-  const WHOOP_KEY = 'fitbit_tokens_v1';
-  const SYNC_KEY  = 'fitbit_last_sync';
+  const WHOOP_KEY = 'google_tokens_v1';
+  const SYNC_KEY  = 'google_last_sync';
 
   function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
   function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
@@ -516,7 +516,7 @@ body::after {
   }));
   $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
 
-  /* ---------- FITBIT ---------- */
+  /* ---------- GOOGLE FIT ---------- */
   let whStats = null;
   function relTime(ts) {
     if (!ts) return 'never';
@@ -549,17 +549,19 @@ body::after {
   async function wRefresh(t) {
     if (!t.refresh) return null;
     try {
-      const r = await fetch('/api/fitbit-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
+      const r = await fetch('/api/google-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
       const j = await r.json();
-      if (j.access_token) { const n = { access:j.access_token, refresh:j.refresh_token||t.refresh, expires:Date.now()+(j.expires_in||28800)*1000 }; saveJSON(WHOOP_KEY, n); return n; }
+      if (j.access_token) { const n = { access:j.access_token, refresh:t.refresh, expires:Date.now()+(j.expires_in||3600)*1000 }; saveJSON(WHOOP_KEY, n); return n; }
     } catch (e) {}
     return null;
   }
-  async function wFetch(path, t) {
-    const params = new URLSearchParams({ path });
-    const r = await fetch('/api/fitbit-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept':'application/json' } });
-    if (r.status === 401) { const n = await wRefresh(t); if (n) return wFetch(path, n); throw new Error('unauthorized'); }
-    if (!r.ok) throw new Error('fitbit ' + r.status);
+  async function wFetch(path, t, opts = {}) {
+    const url = 'https://www.googleapis.com/fitness/v1' + path;
+    const headers = { 'Authorization': 'Bearer ' + t.access, 'Accept': 'application/json' };
+    if (opts.body) headers['Content-Type'] = 'application/json';
+    const r = await fetch(url, { method: opts.body ? 'POST' : 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+    if (r.status === 401) { const n = await wRefresh(t); if (n) return wFetch(path, n, opts); throw new Error('unauthorized'); }
+    if (!r.ok) throw new Error('google ' + r.status);
     return r.json();
   }
   async function syncWhoop() {
@@ -567,20 +569,31 @@ body::after {
     if (!t || !t.access) return;
     if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const [heartData, sleepData, activityData] = await Promise.all([
-        wFetch('/1/user/-/activities/heart/date/today/1d.json', t).catch(()=>null),
-        wFetch('/1.2/user/-/sleep/date/' + today + '.json', t).catch(()=>null),
-        wFetch('/1/user/-/activities/date/today.json', t).catch(()=>null),
+      const now = Date.now();
+      const startOfDay = new Date(); startOfDay.setHours(0,0,0,0);
+      const startMs = startOfDay.getTime();
+      const agg = (dataType) => ({ aggregateBy:[{dataTypeName:dataType}], bucketByTime:{durationMillis:Math.max(now-startMs,1)}, startTimeMillis:startMs, endTimeMillis:now });
+      const yesterday = new Date(now - 86400000).toISOString();
+      const todayStr  = new Date(now).toISOString();
+      const [stepsData, hrData, sleepData] = await Promise.all([
+        wFetch('/users/me/dataset:aggregate', t, { body: agg('com.google.step_count.delta') }).catch(()=>null),
+        wFetch('/users/me/dataset:aggregate', t, { body: agg('com.google.heart_rate.bpm') }).catch(()=>null),
+        wFetch(`/users/me/sessions?activityType=72&startTime=${yesterday}&endTime=${todayStr}`, t).catch(()=>null),
       ]);
       let steps = null, rhr = null, sleep = null;
-      if (activityData && activityData.summary) steps = activityData.summary.steps || null;
-      if (heartData && heartData['activities-heart'] && heartData['activities-heart'][0])
-        rhr = heartData['activities-heart'][0].value.restingHeartRate || null;
-      if (sleepData && sleepData.summary) {
-        const m = sleepData.summary.totalMinutesAsleep || 0;
-        const h = Math.floor(m/60);
-        sleep = h + 'h ' + String(m%60).padStart(2,'0') + 'm';
+      if (stepsData && stepsData.bucket) {
+        const total = stepsData.bucket.reduce((s,b)=>s+(b.dataset?.[0]?.point||[]).reduce((a,p)=>a+(p.value?.[0]?.intVal||0),0),0);
+        if (total > 0) steps = total;
+      }
+      if (hrData && hrData.bucket) {
+        const vals = hrData.bucket.flatMap(b=>(b.dataset?.[0]?.point||[]).map(p=>p.value?.[0]?.fpVal)).filter(v=>v&&v>30);
+        if (vals.length) rhr = Math.round(Math.min(...vals));
+      }
+      if (sleepData && sleepData.session && sleepData.session.length) {
+        let ms = 0;
+        for (const s of sleepData.session) ms += parseInt(s.endTimeMillis) - parseInt(s.startTimeMillis);
+        const m = Math.round(ms/60000);
+        if (m > 0) sleep = Math.floor(m/60) + 'h ' + String(m%60).padStart(2,'0') + 'm';
       }
       whStats = { steps, rhr, sleep };
       localStorage.setItem(SYNC_KEY, String(Date.now()));
