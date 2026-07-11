@@ -72,78 +72,91 @@ body::after {
 .bento {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 168px;
+  grid-auto-rows: 160px;
   grid-auto-flow: dense;
-  gap: 14px;
+  gap: 12px;
 }
 .tile {
-  --accent: #6BE3A4;                 /* each tile overrides this */
+  --accent: #6BE3A4;
   position: relative; overflow: hidden;
   display: flex; flex-direction: column;
-  padding: 20px;
-  border-radius: 18px;
-  text-decoration: none;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  padding: 16px 18px 17px;
+  border-radius: 20px;
+  text-decoration: none; color: inherit;
+  background: rgba(255,255,255,0.038);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 8px 32px rgba(0,0,0,0.4);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-/* The "its own style" bit — a faint accent glow per tile. */
 .tile::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(circle at 78% 18%,
-              color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%);
-  opacity: 0.7; transition: opacity 0.18s ease;
+  background: radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 60%);
+  opacity: 0.5; transition: opacity 0.2s;
 }
-.tile:hover {
-  transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.55);
-}
-.tile:hover::before { opacity: 1; }
+.tile:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 38%, transparent); box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 18px 50px rgba(0,0,0,0.55); }
+.tile:hover::before { opacity: 0.9; }
+.tile:active { transform: scale(0.982); transition-duration: 0.08s; }
 
-/* Tile sizes */
 .tile.big  { grid-column: span 2; grid-row: span 2; }
 .tile.wide { grid-column: span 2; }
 
-/* Tile contents */
-.tile-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.tile-num {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
-  letter-spacing: 0.08em; color: var(--text-tertiary);
-}
-.tile-emoji {
-  font-size: 26px; line-height: 1;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--accent) 60%, transparent));
-}
-.tile-spacer { flex: 1; }
-.tile-title {
-  font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
-  color: var(--text-primary); margin: 0 0 4px;
-}
-.tile.big .tile-title { font-size: 28px; }
-.tile-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.tile-sub {
-  font-size: 13px; color: var(--text-tertiary);
-}
-.tile-arrow {
-  font-size: 18px; color: var(--accent);
-  transition: transform 0.18s ease; flex-shrink: 0;
-}
-.tile:hover .tile-arrow { transform: translateX(4px); }
+/* Header: eyebrow label + arrow */
+.tile-head { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.tile-eye { font-size: 9.5px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); opacity: 0.8; }
+.tile-arr { font-size: 13px; color: var(--accent); opacity: 0.65; transition: transform 0.18s, opacity 0.18s; }
+.tile:hover .tile-arr { transform: translateX(3px); opacity: 1; }
 
-/* ===== Responsive: collapse the bento on small screens ===== */
+/* Nav tile body (icon + name pushed to bottom) */
+.tile-body { margin-top: auto; }
+.tile-icon { font-size: 26px; line-height: 1; margin-bottom: 8px; }
+.tile-name { font-size: 19px; font-weight: 700; color: #FAFAFA; letter-spacing: -0.02em; margin: 0 0 2px; line-height: 1.15; }
+.tile-desc { font-size: 12px; color: var(--text-tertiary); }
+
+/* Data tile: hero number */
+.tile-hero { font-size: 46px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: #FAFAFA; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.tile.big .tile-hero { font-size: 56px; margin-top: 10px; }
+.tile-hero-unit { font-size: 12.5px; color: var(--text-tertiary); margin-top: 4px; }
+
+/* Progress bar */
+.tile-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; margin: 9px 0 5px; flex-shrink: 0; }
+.tile-bar-fill { height: 100%; border-radius: 999px; background: var(--accent); max-width: 100%; transition: width 0.7s cubic-bezier(0.22,1,0.36,1); }
+.tile-bar-lbl { font-size: 11.5px; color: var(--text-tertiary); }
+
+/* Macro bars (nutrition big tile) */
+.tile-macros { margin-top: auto; padding-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.tile-macro { display: flex; align-items: center; gap: 7px; }
+.tile-macro-lbl { font-size: 9.5px; font-weight: 800; letter-spacing: 0.07em; color: var(--text-tertiary); width: 11px; flex-shrink: 0; }
+.tile-macro-track { flex: 1; height: 3px; background: rgba(255,255,255,0.07); border-radius: 999px; overflow: hidden; }
+.tile-macro-bar  { height: 100%; border-radius: 999px; transition: width 0.6s cubic-bezier(0.22,1,0.36,1); }
+.tile-macro-val  { font-size: 11px; font-weight: 700; color: var(--text-secondary); width: 32px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* Water servings dots */
+.tile-dots { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0 4px; }
+.tile-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,0.10); flex-shrink: 0; }
+.tile-dot.on { background: var(--accent); box-shadow: 0 0 5px color-mix(in srgb, var(--accent) 55%, transparent); }
+
+/* Burn deficit/eaten stats */
+.tile-stats { display: flex; gap: 14px; margin-top: 5px; }
+.tile-stat-val { font-size: 14px; font-weight: 700; color: var(--text-tertiary); line-height: 1.1; }
+.tile-stat-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 2px; }
+
+/* ===== Responsive ===== */
 @media (max-width: 720px) {
-  .bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 150px; }
-  .tile.big { grid-column: span 2; grid-row: span 1; }
-  .tile.big .tile-title { font-size: 22px; }
+  .bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 150px; gap: 10px; }
+  .tile.big { grid-column: span 2; }
+  .tile.big .tile-hero { font-size: 44px; }
+  .tile-macros { gap: 4px; }
 }
 @media (max-width: 440px) {
-  body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
-  .bento { grid-template-columns: 1fr; grid-auto-rows: 132px; }
-  .tile.big, .tile.wide { grid-column: span 1; }
+  body { padding: max(20px, env(safe-area-inset-top)) 12px 50px; }
+  .bento { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 140px; gap: 9px; }
+  .tile.big { grid-column: span 2; }
+  .tile.wide { grid-column: span 2; }
+  .tile-hero { font-size: 36px; }
+  .tile.big .tile-hero { font-size: 42px; }
 }
 
 /* ===== Header row + gear ===== */
@@ -230,115 +243,141 @@ body::after {
 
   <div class="bento">
 
-    <!-- Big tile -->
-    <a class="tile big" href="main.html" style="--accent:#6BE3A4">
-      <div class="tile-top">
-        <span class="tile-num">·01</span>
-        <span class="tile-emoji">🏠</span>
+    <!-- NUTRITION — big 2×2, live calories + macros -->
+    <a class="tile big" href="nutrition.html" style="--accent:#f59e0b">
+      <div class="tile-head">
+        <span class="tile-eye">Nutrition</span>
+        <span class="tile-arr">→</span>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Main</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Goals & daily plan</span>
-        <span class="tile-arrow">→</span>
+      <div class="tile-hero" id="tilNuKcal">—</div>
+      <div class="tile-hero-unit" id="tilNuSub">Tap to log food</div>
+      <div class="tile-bar"><div class="tile-bar-fill" id="tilNuBar" style="width:0%"></div></div>
+      <div class="tile-bar-lbl" id="tilNuBarLbl"></div>
+      <div class="tile-macros">
+        <div class="tile-macro">
+          <span class="tile-macro-lbl">P</span>
+          <div class="tile-macro-track"><div class="tile-macro-bar" id="tilNuProtBar" style="width:0%;background:#6EE7B7"></div></div>
+          <span class="tile-macro-val" id="tilNuProt">—</span>
+        </div>
+        <div class="tile-macro">
+          <span class="tile-macro-lbl">C</span>
+          <div class="tile-macro-track"><div class="tile-macro-bar" id="tilNuCarbBar" style="width:0%;background:#60A5FA"></div></div>
+          <span class="tile-macro-val" id="tilNuCarb">—</span>
+        </div>
+        <div class="tile-macro">
+          <span class="tile-macro-lbl">F</span>
+          <div class="tile-macro-track"><div class="tile-macro-bar" id="tilNuFatBar" style="width:0%;background:#F2C063"></div></div>
+          <span class="tile-macro-val" id="tilNuFat">—</span>
+        </div>
       </div>
     </a>
 
-    <!-- Wide tile -->
-    <a class="tile wide" href="gym.html" style="--accent:#7DD3FC">
-      <div class="tile-top">
-        <span class="tile-num">·02</span>
-        <span class="tile-emoji">💪</span>
+    <!-- WATER — wide, live serving count + dots -->
+    <a class="tile wide" href="po-water.html" style="--accent:#60A5FA">
+      <div class="tile-head">
+        <span class="tile-eye">Water</span>
+        <span class="tile-arr">→</span>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Fitness</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Workouts, splits, sessions</span>
-        <span class="tile-arrow">→</span>
+      <div class="tile-hero" id="tilWatNum">—</div>
+      <div class="tile-dots" id="tilWatDots"></div>
+      <div class="tile-bar-lbl" id="tilWatLbl">Stay hydrated</div>
+    </a>
+
+    <!-- BURN — wide, live kcal burned + deficit -->
+    <a class="tile wide" href="health.html" style="--accent:#fbbf24">
+      <div class="tile-head">
+        <span class="tile-eye">Today's Burn</span>
+        <span class="tile-arr">→</span>
+      </div>
+      <div class="tile-hero" id="tilBurnNum">—</div>
+      <div class="tile-stats">
+        <div>
+          <div class="tile-stat-val" id="tilBurnDef">—</div>
+          <div class="tile-stat-lbl">deficit</div>
+        </div>
+        <div>
+          <div class="tile-stat-val" id="tilBurnEat">—</div>
+          <div class="tile-stat-lbl">eaten</div>
+        </div>
+      </div>
+      <div class="tile-bar-lbl" id="tilBurnSub" style="margin-top:auto">Run Fitbit shortcut to sync</div>
+    </a>
+
+    <!-- FITNESS -->
+    <a class="tile" href="gym.html" style="--accent:#7DD3FC">
+      <div class="tile-head">
+        <span class="tile-eye">Fitness</span>
+        <span class="tile-arr">→</span>
+      </div>
+      <div class="tile-body">
+        <div class="tile-icon">💪</div>
+        <h2 class="tile-name">Training</h2>
+        <div class="tile-desc">Splits & sessions</div>
       </div>
     </a>
 
-    <!-- Small tile -->
+    <!-- HEALTH -->
     <a class="tile" href="health.html" style="--accent:#A7F3D0">
-      <div class="tile-top">
-        <span class="tile-num">·03</span>
-        <span class="tile-emoji">💊</span>
+      <div class="tile-head">
+        <span class="tile-eye">Health</span>
+        <span class="tile-arr">→</span>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Health</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Supplements & vitals</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Small tile -->
-    <a class="tile" href="po-water.html" style="--accent:#60A5FA">
-      <div class="tile-top">
-        <span class="tile-num">·04</span>
-        <span class="tile-emoji">💧</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Water</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Hydration</span>
-        <span class="tile-arrow">→</span>
+      <div class="tile-body">
+        <div class="tile-icon">💊</div>
+        <h2 class="tile-name">Stack</h2>
+        <div class="tile-desc">Supplements & vitals</div>
       </div>
     </a>
 
-    <!-- Wide tile -->
+    <!-- FINANCE — wide -->
     <a class="tile wide" href="finance.html" style="--accent:#F2C063">
-      <div class="tile-top">
-        <span class="tile-num">·05</span>
-        <span class="tile-emoji">📊</span>
+      <div class="tile-head">
+        <span class="tile-eye">Finance</span>
+        <span class="tile-arr">→</span>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Finance</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Net worth & spending</span>
-        <span class="tile-arrow">→</span>
+      <div class="tile-body">
+        <div class="tile-icon">📊</div>
+        <h2 class="tile-name">Money</h2>
+        <div class="tile-desc">Net worth & spending</div>
       </div>
     </a>
 
-    <!-- Small tile -->
+    <!-- MAIN -->
+    <a class="tile" href="main.html" style="--accent:#6BE3A4">
+      <div class="tile-head">
+        <span class="tile-eye">Daily</span>
+        <span class="tile-arr">→</span>
+      </div>
+      <div class="tile-body">
+        <div class="tile-icon">🏠</div>
+        <h2 class="tile-name">Main</h2>
+        <div class="tile-desc">Goals & daily plan</div>
+      </div>
+    </a>
+
+    <!-- CAFFEINE -->
     <a class="tile" href="caffeine.html" style="--accent:#C9A36B">
-      <div class="tile-top">
-        <span class="tile-num">·06</span>
-        <span class="tile-emoji">☕</span>
+      <div class="tile-head">
+        <span class="tile-eye">Caffeine</span>
+        <span class="tile-arr">→</span>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Caffeine</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Intake & timing</span>
-        <span class="tile-arrow">→</span>
+      <div class="tile-body">
+        <div class="tile-icon">☕</div>
+        <h2 class="tile-name">Coffee</h2>
+        <div class="tile-desc">Intake & timing</div>
       </div>
     </a>
 
-    <!-- Wide tile -->
+    <!-- NOVA — wide -->
     <a class="tile wide" href="nova-lite.html" style="--accent:#A78BFA">
-      <div class="tile-top">
-        <span class="tile-num">·07</span>
-        <span class="tile-emoji">🧠</span>
+      <div class="tile-head">
+        <span class="tile-eye">AI Mentor</span>
+        <span class="tile-arr">→</span>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Nova</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Your AI mentor</span>
-        <span class="tile-arrow">→</span>
-      </div>
-    </a>
-
-    <!-- Small tile -->
-    <a class="tile" href="nutrition.html" style="--accent:#f59e0b">
-      <div class="tile-top">
-        <span class="tile-num">·08</span>
-        <span class="tile-emoji">🥗</span>
-      </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Nutrition</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Calories & macros</span>
-        <span class="tile-arrow">→</span>
+      <div class="tile-body">
+        <div class="tile-icon">🧠</div>
+        <h2 class="tile-name">Nova</h2>
+        <div class="tile-desc">Your personal AI coach</div>
       </div>
     </a>
 
@@ -509,6 +548,77 @@ body::after {
     if (kg) $('weight').value = weightUnit === 'lb' ? Math.round(kg * 2.20462) : Math.round(kg);
   }));
   $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
+
+  /* ---------- DASHBOARD TILES ---------- */
+  function renderTiles() {
+    const dk = (() => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
+
+    // Nutrition tile
+    try {
+      const nuLog  = loadJSON('nu_log', []);
+      const nuTgts = loadJSON('nu_targets', null);
+      const dayData = Array.isArray(nuLog) ? nuLog.find(d => d.dateKey === dk) : null;
+      const nut = dayData ? dayData.entries.reduce((a,e) => ({kcal:a.kcal+(e.kcal||0),prot:a.prot+(e.prot||0),carb:a.carb+(e.carb||0),fat:a.fat+(e.fat||0)}), {kcal:0,prot:0,carb:0,fat:0}) : null;
+      const dayType = (dayData && dayData.dayType) || 'training';
+      const tgt = (nuTgts && (nuTgts[dayType] || nuTgts.training)) || {kcal:2400,prot:180,carb:250,fat:70};
+      if (nut && nut.kcal > 0) {
+        $('tilNuKcal').textContent = nut.kcal.toLocaleString();
+        const pct = Math.min(100, nut.kcal / tgt.kcal * 100);
+        $('tilNuSub').textContent = 'of ' + tgt.kcal.toLocaleString() + ' kcal · ' + Math.round(pct) + '%';
+        $('tilNuBar').style.width = pct + '%';
+        const rem = tgt.kcal - nut.kcal;
+        if (rem >= 0) {
+          $('tilNuBarLbl').textContent = rem.toLocaleString() + ' kcal remaining';
+        } else {
+          $('tilNuBarLbl').textContent = Math.abs(rem).toLocaleString() + ' kcal over target';
+          $('tilNuBar').style.background = '#FF8A8A';
+          $('tilNuBarLbl').style.color = '#FF8A8A';
+        }
+        $('tilNuProt').textContent = Math.round(nut.prot) + 'g';
+        $('tilNuCarb').textContent = Math.round(nut.carb) + 'g';
+        $('tilNuFat').textContent  = Math.round(nut.fat)  + 'g';
+        $('tilNuProtBar').style.width = Math.min(100, nut.prot / (tgt.prot||1) * 100) + '%';
+        $('tilNuCarbBar').style.width = Math.min(100, nut.carb / (tgt.carb||1) * 100) + '%';
+        $('tilNuFatBar').style.width  = Math.min(100, nut.fat  / (tgt.fat||1)  * 100) + '%';
+      }
+    } catch(e) {}
+
+    // Water tile
+    try {
+      const ws  = loadJSON('po_water_v1', null);
+      const cnt = (ws && ws.logs) ? (ws.logs[dk] || 0) : 0;
+      const unit = (ws && ws.unit) || 'glass';
+      const ml   = unit === 'bottle' ? ((ws && ws.bottleMl) || 500) : ((ws && ws.glassMl) || 250);
+      const tgtN = Math.round(2400 / ml);
+      $('tilWatNum').textContent = cnt > 0 ? cnt : '0';
+      $('tilWatLbl').textContent = (cnt * ml / 1000).toFixed(1) + ' L · ' + cnt + ' of ' + tgtN + ' ' + (unit === 'bottle' ? 'bottles' : 'glasses');
+      const dotsEl = $('tilWatDots');
+      dotsEl.innerHTML = '';
+      for (let i = 0; i < Math.min(tgtN, 12); i++) {
+        const d = document.createElement('div');
+        d.className = 'tile-dot' + (i < cnt ? ' on' : '');
+        dotsEl.appendChild(d);
+      }
+    } catch(e) {}
+
+    // Burn tile
+    try {
+      const burn = loadJSON('nu_cal_burned', null);
+      const nuLog = loadJSON('nu_log', []);
+      const dayData = Array.isArray(nuLog) ? nuLog.find(d => d.dateKey === dk) : null;
+      const eaten = dayData ? dayData.entries.reduce((s,e) => s+(e.kcal||0), 0) : 0;
+      if (burn && burn.date === dk) {
+        const diff = burn.kcal - eaten;
+        $('tilBurnNum').textContent = burn.kcal.toLocaleString();
+        $('tilBurnEat').textContent = eaten.toLocaleString();
+        $('tilBurnDef').textContent = Math.abs(diff).toLocaleString();
+        $('tilBurnDef').style.color = diff > 0 ? '#6EE7B7' : '#FF8A8A';
+        $('tilBurnSub').textContent = diff > 0 ? diff.toLocaleString() + ' kcal under budget' : Math.abs(diff).toLocaleString() + ' kcal over budget';
+        $('tilBurnSub').style.color = diff > 0 ? '#6EE7B7' : '#FF8A8A';
+      }
+    } catch(e) {}
+  }
+  renderTiles();
 
   /* ---------- CALORIE BURN ---------- */
   function renderBurn() {
