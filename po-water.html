@@ -701,7 +701,7 @@ html, body {
   }
   function normalize(s) {
     s = s || {};
-    s.unit = s.unit || CONFIG.unit || 'bottle';
+    s.unit = CONFIG.unit || s.unit || 'bottle';
     s.bottleMl = s.bottleMl || CONFIG.bottleMl || 500;
     s.glassMl  = s.glassMl  || CONFIG.glassMl  || 250;
     s.weightUnit = s.weightUnit || 'kg';
