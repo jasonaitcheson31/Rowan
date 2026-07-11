@@ -585,19 +585,30 @@ body::after {
 
     // Water tile
     try {
-      const ws  = loadJSON('po_water_v1', null);
-      const cnt = (ws && ws.logs) ? (ws.logs[dk] || 0) : 0;
+      const ws   = loadJSON('po_water_v1', null);
+      const cnt  = (ws && ws.logs) ? (ws.logs[dk] || 0) : 0;
       const unit = (ws && ws.unit) || 'glass';
-      const ml   = unit === 'bottle' ? ((ws && ws.bottleMl) || 500) : ((ws && ws.glassMl) || 250);
-      const tgtN = Math.round(2400 / ml);
-      $('tilWatNum').textContent = cnt > 0 ? cnt : '0';
-      $('tilWatLbl').textContent = (cnt * ml / 1000).toFixed(1) + ' L · ' + cnt + ' of ' + tgtN + ' ' + (unit === 'bottle' ? 'bottles' : 'glasses');
-      const dotsEl = $('tilWatDots');
+      let mlPer, unitLabel;
+      if      (unit === 'bottle') { mlPer = (ws && ws.bottleMl) || 500; unitLabel = 'bottles'; }
+      else if (unit === 'glass')  { mlPer = (ws && ws.glassMl)  || 250; unitLabel = 'glasses'; }
+      else if (unit === 'oz')     { mlPer = 30;  unitLabel = 'oz'; }
+      else                        { mlPer = 1;   unitLabel = 'ml'; } // unit === 'ml': cnt IS total ml
+      const totalMl = cnt * mlPer;
+      const tgtMl   = 2400;
+      const dotsEl  = $('tilWatDots');
       dotsEl.innerHTML = '';
-      for (let i = 0; i < Math.min(tgtN, 12); i++) {
-        const d = document.createElement('div');
-        d.className = 'tile-dot' + (i < cnt ? ' on' : '');
-        dotsEl.appendChild(d);
+      if (unit === 'ml') {
+        $('tilWatNum').textContent = totalMl >= 1000 ? (totalMl / 1000).toFixed(1) + 'L' : totalMl + ' ml';
+        $('tilWatLbl').textContent = totalMl + ' ml logged today';
+      } else {
+        const tgtN = Math.round(tgtMl / mlPer);
+        $('tilWatNum').textContent = cnt;
+        $('tilWatLbl').textContent = (totalMl / 1000).toFixed(1) + ' L · ' + cnt + ' of ' + tgtN + ' ' + unitLabel;
+        for (let i = 0; i < Math.min(tgtN, 12); i++) {
+          const d = document.createElement('div');
+          d.className = 'tile-dot' + (i < cnt ? ' on' : '');
+          dotsEl.appendChild(d);
+        }
       }
     } catch(e) {}
 
