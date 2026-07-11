@@ -801,7 +801,7 @@ html, body {
     $('waterUnitLabel').textContent = unitName.toUpperCase() + ' DRANK TODAY';
     $('waterNum').textContent = count;
     $('waterTarget').textContent = '/ ' + targetUnits;
-    $('waterPlusLabel').textContent = 'Drank a ' + unitLabelSingular();
+    $('waterPlusLabel').textContent = state.unit === 'ml' ? '+ 100 ml' : 'Drank a ' + unitLabelSingular();
 
     // Progress bar with three zones: low (0-65%), healthy (65-100%), over (100-150%)
     const pctRaw = (count / targetUnits) * 100;
@@ -908,15 +908,16 @@ html, body {
   // ============================================================
   // EVENT WIRING
   // ============================================================
+  const waterStep = () => state.unit === 'ml' ? 100 : 1;
   $('waterPlusBtn').addEventListener('click', () => {
-    setTodayCount(todayCount() + 1);
+    setTodayCount(todayCount() + waterStep());
     renderWater();
     const btn = $('waterPlusBtn');
     btn.style.transform = 'scale(0.97)';
     setTimeout(() => { btn.style.transform = ''; }, 120);
   });
   $('waterMinusBtn').addEventListener('click', () => {
-    setTodayCount(Math.max(0, todayCount() - 1));
+    setTodayCount(Math.max(0, todayCount() - waterStep()));
     renderWater();
   });
 
