@@ -297,8 +297,9 @@ html, body {
   </div>
 
   <div class="nu-day-toggle">
-    <button class="nu-day-btn" id="nuTrainingBtn" data-type="training">Training Day</button>
-    <button class="nu-day-btn" id="nuRestBtn" data-type="rest">Rest Day</button>
+    <button class="nu-day-btn" id="nuTrainingBtn" data-type="training">Training</button>
+    <button class="nu-day-btn" id="nuWorkBtn" data-type="work">Working</button>
+    <button class="nu-day-btn" id="nuRestBtn" data-type="rest">Rest</button>
   </div>
 
   <!-- Calories -->
@@ -405,6 +406,28 @@ html, body {
     </div>
 
     <div class="nu-modal-section">
+      <div class="nu-modal-section-label">Working Day</div>
+      <div class="nu-modal-grid">
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-kcal)">kcal</span>
+          <input class="nu-modal-input" id="wKcal" type="number" inputmode="numeric">
+        </div>
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-prot)">Protein g</span>
+          <input class="nu-modal-input" id="wProt" type="number" inputmode="decimal">
+        </div>
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-carb)">Carbs g</span>
+          <input class="nu-modal-input" id="wCarb" type="number" inputmode="decimal">
+        </div>
+        <div class="nu-modal-field">
+          <span class="nu-modal-field-label" style="color:var(--c-fat)">Fat g</span>
+          <input class="nu-modal-input" id="wFat" type="number" inputmode="decimal">
+        </div>
+      </div>
+    </div>
+
+    <div class="nu-modal-section">
       <div class="nu-modal-section-label">Rest Day</div>
       <div class="nu-modal-grid">
         <div class="nu-modal-field">
@@ -438,6 +461,7 @@ const LOG_KEY     = 'nu_log';
 
 const DEFAULT_TARGETS = {
   training: { kcal: 2500, prot: 180, carb: 250, fat: 80 },
+  work:     { kcal: 2200, prot: 170, carb: 210, fat: 75 },
   rest:     { kcal: 2000, prot: 160, carb: 180, fat: 70 }
 };
 
@@ -508,6 +532,7 @@ function render() {
   const tot = totals();
 
   $('nuTrainingBtn').classList.toggle('active', today.dayType === 'training');
+  $('nuWorkBtn').classList.toggle('active',     today.dayType === 'work');
   $('nuRestBtn').classList.toggle('active',     today.dayType === 'rest');
 
   $('nuKcalNum').textContent    = tot.kcal;
@@ -556,7 +581,7 @@ function render() {
 }
 
 // Day type
-[$('nuTrainingBtn'), $('nuRestBtn')].forEach(btn => {
+[$('nuTrainingBtn'), $('nuWorkBtn'), $('nuRestBtn')].forEach(btn => {
   btn.addEventListener('click', () => {
     today.dayType = btn.dataset.type;
     persistLog(today);
@@ -597,6 +622,10 @@ $('nuEditBtn').addEventListener('click', () => {
   $('tProt').value = targets.training.prot;
   $('tCarb').value = targets.training.carb;
   $('tFat').value  = targets.training.fat;
+  $('wKcal').value = targets.work.kcal;
+  $('wProt').value = targets.work.prot;
+  $('wCarb').value = targets.work.carb;
+  $('wFat').value  = targets.work.fat;
   $('rKcal').value = targets.rest.kcal;
   $('rProt').value = targets.rest.prot;
   $('rCarb').value = targets.rest.carb;
@@ -613,6 +642,12 @@ $('nuModalSave').addEventListener('click', () => {
     prot: parseFloat($('tProt').value) || 0,
     carb: parseFloat($('tCarb').value) || 0,
     fat:  parseFloat($('tFat').value)  || 0
+  };
+  targets.work = {
+    kcal: Math.round(parseFloat($('wKcal').value) || 0),
+    prot: parseFloat($('wProt').value) || 0,
+    carb: parseFloat($('wCarb').value) || 0,
+    fat:  parseFloat($('wFat').value)  || 0
   };
   targets.rest = {
     kcal: Math.round(parseFloat($('rKcal').value) || 0),
