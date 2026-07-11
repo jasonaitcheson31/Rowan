@@ -513,11 +513,15 @@ function dateKey() {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-// Capture cal_burned from iOS Shortcut URL param
+// Capture cal_burned from iOS Shortcut URL param.
+// Stored in a variable so onApplied can re-apply it after cloud sync
+// overwrites localStorage (sync deletes local keys not present in remote).
+let pendingCalBurned = null;
 (function() {
   const p = new URLSearchParams(location.search);
   const cb = parseInt(p.get('cal_burned'));
   if (cb > 0) {
+    pendingCalBurned = cb;
     localStorage.setItem(BURN_KEY, JSON.stringify({ date: dateKey(), kcal: cb }));
     history.replaceState(null, '', location.pathname);
   }
@@ -765,6 +769,10 @@ document.addEventListener('DOMContentLoaded', function () {
     appKey: 'nutrition',
     syncedKeys: [LOG_KEY, TARGETS_KEY, BURN_KEY],
     onApplied: function () {
+      if (pendingCalBurned != null) {
+        localStorage.setItem(BURN_KEY, JSON.stringify({ date: dateKey(), kcal: pendingCalBurned }));
+        pendingCalBurned = null;
+      }
       today   = loadTodayLog();
       targets = loadTargets();
       render();
