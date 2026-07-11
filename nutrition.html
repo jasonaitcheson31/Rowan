@@ -758,6 +758,18 @@ $('nuModalSave').addEventListener('click', () => {
 });
 
 render();
+
+if (typeof initCloudSync === 'function') {
+  initCloudSync({
+    appKey: 'nutrition',
+    syncedKeys: [LOG_KEY, TARGETS_KEY, BURN_KEY],
+    onApplied: function () {
+      today    = loadTodayLog();
+      targets  = loadTargets();
+      render();
+    }
+  });
+}
 </script>
 </body>
 </html>
