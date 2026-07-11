@@ -654,6 +654,20 @@ body::after {
     }
   }
   renderBurn();
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({
+      appKey: 'nutrition',
+      syncedKeys: ['nu_log', 'nu_targets', 'nu_cal_burned'],
+      onApplied: function () { renderTiles(); renderBurn(); }
+    });
+    initCloudSync({
+      appKey: 'health',
+      syncedKeys: ['po_water_v1'],
+      onApplied: function () { renderTiles(); }
+    });
+  });
 })();
 </script>
 </body>
